@@ -431,6 +431,21 @@
     showForecast(c.lat, c.lng);
   });
   map.on("move", updateCrosshair);
+
+  // Crosshair on/off toggle (persisted)
+  const xhToggle = document.getElementById("xh-toggle");
+  let xhOn = true;
+  try { xhOn = localStorage.getItem("ow_crosshair") !== "0"; } catch (e) {}
+  const applyXh = () => {
+    document.getElementById("crosshair").classList.toggle("hidden", !xhOn);
+    xhToggle.classList.toggle("active", xhOn);
+  };
+  applyXh();
+  xhToggle.addEventListener("click", () => {
+    xhOn = !xhOn;
+    try { localStorage.setItem("ow_crosshair", xhOn ? "1" : "0"); } catch (e) {}
+    applyXh();
+  });
   document.getElementById("panel-close").addEventListener("click", () => W.ui.closePanel());
 
   // ---- Route planner -------------------------------------------------
