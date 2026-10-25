@@ -1,0 +1,16 @@
+{
+  "name": "OpenWindy — מזג אוויר חינמי",
+  "short_name": "OpenWindy",
+  "description": "חלופה חינמית ל-Windy: רוח, גשם, טמפרטורה, מודלים, מסלול ועוד.",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

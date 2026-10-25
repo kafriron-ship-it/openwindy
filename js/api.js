@@ -102,6 +102,22 @@
       return { times, series };
     },
 
+    // Vertical sounding: pressure-level profile for one point (current day).
+    async sounding(lat, lon) {
+      const vars = [];
+      W.soundingLevels.forEach((p) => {
+        vars.push(`temperature_${p}hPa`, `relative_humidity_${p}hPa`,
+          `wind_speed_${p}hPa`, `wind_direction_${p}hPa`, `geopotential_height_${p}hPa`);
+      });
+      const params = new URLSearchParams({
+        latitude: lat.toFixed(4), longitude: lon.toFixed(4), timezone: "GMT",
+        hourly: vars.join(","), forecast_days: "1",
+        wind_speed_unit: C.units.windSpeed, temperature_unit: "celsius",
+      });
+      const data = await getJSON(`${C.forecastUrl}?${params}`);
+      return data.hourly || {};
+    },
+
     async rainviewer() {
       const data = await getJSON(C.rainviewerIndex);
       const past = (data.radar && data.radar.past) || [];

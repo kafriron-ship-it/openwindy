@@ -150,7 +150,7 @@
         labels += `<text x="${X.toFixed(1)}" y="${timeY}" fill="#93a0bd" font-size="9" text-anchor="middle">${lbl}</text>`;
       }
 
-      return `<svg viewBox="0 0 ${W0} ${Hh}" width="100%" style="display:block">
+      return `<svg viewBox="0 0 ${W0} ${Hh}" width="100%" direction="ltr" style="display:block">
         <defs><linearGradient id="tg" x1="0" x2="0" y1="0" y2="1">
           <stop offset="0" stop-color="#f46d43" stop-opacity="0.5"/>
           <stop offset="1" stop-color="#f46d43" stop-opacity="0"/></linearGradient></defs>
@@ -198,6 +198,7 @@
           <div class="metric"><div class="k">לחות</div><div class="v">${c.relative_humidity_2m}%</div></div>
           <div class="metric"><div class="k">לחץ</div><div class="v">${Math.round(c.surface_pressure)} hPa</div></div>
           <div class="metric"><div class="k">משקעים</div><div class="v">${c.precipitation} מ"מ</div></div></div>
+        <button id="open-sounding" class="rt-clear" style="margin:14px 0 0">📊 פרופיל אנכי (סאונדינג)</button>
         <div class="section-title">24 השעות הקרובות</div><div class="hourly">${hours.join("")}</div>
         <div class="section-title">מטאוגרמה — 48 שעות</div>
         <div class="meteogram">${this._meteogram(H, nowIdx, 48)}</div>
@@ -207,6 +208,87 @@
           <div class="metric"><div class="k">🌅 זריחה</div><div class="v">${hhmm(new Date(D.sunrise[0]))}</div></div>
           <div class="metric"><div class="k">🌇 שקיעה</div><div class="v">${hhmm(new Date(D.sunset[0]))}</div></div></div>
         <div class="loc-sub" style="margin-top:18px">נתונים: Open-Meteo (חינמי, קוד פתוח)</div>`;
+      this.openPanel();
+    },
+
+    // Vertical sounding (airgram) — temperature + dewpoint vs pressure, wind per level.
+    renderSounding(hourly, label, onBack) {
+      const dewpoint = (t, rh) => {
+        if (t == null || rh == null || rh <= 0) return null;
+        const a = 17.625, b = 243.04;
+        const g = Math.log(rh / 100) + (a * t) / (b + t);
+        return (b * g) / (a - g);
+      };
+      // nearest hour to now
+      const times = hourly.time || [];
+      let ti = 0, bd = Infinity;
+      for (let i = 0; i < times.length; i++) {
+        const d = Math.abs(toLocal(times[i]).getTime() - Date.now());
+        if (d < bd) { bd = d; ti = i; }
+      }
+      const levels = [];
+      W.soundingLevels.forEach((p) => {
+        const t = (hourly[`temperature_${p}hPa`] || [])[ti];
+        if (t == null) return;
+        const rh = (hourly[`relative_humidity_${p}hPa`] || [])[ti];
+        levels.push({
+          p, t, rh, td: dewpoint(t, rh),
+          gh: (hourly[`geopotential_height_${p}hPa`] || [])[ti],
+          ws: (hourly[`wind_speed_${p}hPa`] || [])[ti],
+          wd: (hourly[`wind_direction_${p}hPa`] || [])[ti],
+        });
+      });
+
+      const W0 = 344, Hh = 380, pl = 44, pr = 296, pt = 18, pb = 322, wx = 322;
+      const pTop = W.soundingLevels[W.soundingLevels.length - 1], pBot = W.soundingLevels[0];
+      const lgT = Math.log(pBot), lgB = Math.log(pTop);
+      const yP = (p) => pb - ((lgT - Math.log(p)) / (lgT - lgB)) * (pb - pt);
+      const temps = levels.flatMap((l) => [l.t, l.td]).filter((v) => v != null);
+      let tMin = Math.min(...temps) - 3, tMax = Math.max(...temps) + 3;
+      const xT = (t) => pl + ((t - tMin) / (tMax - tMin)) * (pr - pl);
+
+      let grid = "", tempLine = "", dewLine = "", winds = "";
+      // temp vertical gridlines
+      for (let t = Math.ceil(tMin / 10) * 10; t < tMax; t += 10) {
+        const X = xT(t).toFixed(1);
+        grid += `<line x1="${X}" y1="${pt}" x2="${X}" y2="${pb}" stroke="#223052" stroke-width="1"/>
+          <text x="${X}" y="${pb + 12}" fill="#93a0bd" font-size="9" text-anchor="middle">${t}°</text>`;
+      }
+      // pressure rows + labels + lines
+      levels.forEach((l, i) => {
+        const Y = yP(l.p).toFixed(1);
+        grid += `<line x1="${pl}" y1="${Y}" x2="${pr}" y2="${Y}" stroke="#1a2440" stroke-width="1"/>
+          <text x="2" y="${(+Y + 3)}" fill="#93a0bd" font-size="9">${l.p}</text>
+          <text x="${pr + 2}" y="${(+Y + 3)}" fill="#5f6d8c" font-size="8">${l.gh != null ? Math.round(l.gh / 1000 * 10) / 10 + "ק" : ""}</text>`;
+        if (l.t != null) { const X = xT(l.t).toFixed(1); tempLine += (i ? "L" : "M") + ` ${X} ${Y} `; }
+        if (l.ws != null) {
+          winds += `<g transform="translate(${wx},${Y}) rotate(${(l.wd || 0) + 180})">
+            <line x1="0" y1="-6" x2="0" y2="6" stroke="#9fd0ff" stroke-width="1.5"/>
+            <path d="M0 -7 L2.5 -2.5 L-2.5 -2.5 Z" fill="#9fd0ff"/></g>
+            <text x="${wx + 10}" y="${(+Y + 3)}" fill="#93a0bd" font-size="8">${Math.round(W.units.windVal(l.ws))}</text>`;
+        }
+      });
+      levels.forEach((l, i) => {
+        if (l.td == null) return;
+        const X = xT(l.td).toFixed(1), Y = yP(l.p).toFixed(1);
+        dewLine += (dewLine ? "L" : "M") + ` ${X} ${Y} `;
+      });
+
+      const when = toLocal(times[ti]);
+      $("panel-content").innerHTML = `
+        <button id="snd-back" class="rt-clear" style="margin:0 0 12px">← חזרה לתחזית</button>
+        <h2 class="loc-name">📊 פרופיל אנכי</h2>
+        <div class="loc-sub">${label} · ${when.getHours().toString().padStart(2,"0")}:00</div>
+        <div class="meteogram"><svg viewBox="0 0 ${W0} ${Hh}" width="100%" direction="ltr" style="display:block">
+          ${grid}
+          <path d="${tempLine}" fill="none" stroke="#f46d43" stroke-width="2"/>
+          <path d="${dewLine}" fill="none" stroke="#39d98a" stroke-width="2"/>
+          <text x="${pl}" y="12" fill="#f46d43" font-size="10">— טמפ׳</text>
+          <text x="${pl + 50}" y="12" fill="#39d98a" font-size="10">— נק׳ טל</text>
+          <text x="${wx - 8}" y="12" fill="#9fd0ff" font-size="10">רוח (${W.units.windUnit()})</text>
+        </svg></div>
+        <div class="loc-sub">ציר אנכי: לחץ (hPa) + גובה (ק"מ). פער קטן בין הקווים = אוויר לח. נתונים: Open-Meteo</div>`;
+      $("snd-back").addEventListener("click", onBack);
       this.openPanel();
     },
 

@@ -19,6 +19,9 @@ W.config = {
   units: { temperature: "celsius", windSpeed: "ms" },
 };
 
+// Pressure levels (hPa) for the vertical sounding, surface -> top.
+W.soundingLevels = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150];
+
 // Forecast models (Open-Meteo). best_match = Open-Meteo's auto blend.
 W.models = [
   { id: "best_match",   label: "אוטומטי" },

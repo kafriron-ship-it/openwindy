@@ -188,8 +188,24 @@
       state.marker = L.marker([lat, lon]).addTo(map);
       W.ui.renderForecast(data, label);
       updateFavButton();
+      const sb = document.getElementById("open-sounding");
+      if (sb) sb.addEventListener("click", () => showSounding(lat, lon, label));
     } catch (e) {
       alert(e.code === 429 ? "חרגת ממכסת Open-Meteo — נסה בעוד כמה דקות" : "שגיאת תחזית: " + e.message);
+    } finally { W.ui.loading(false); }
+  }
+
+  async function showSounding(lat, lon, label) {
+    W.ui.loading(true);
+    try {
+      const hourly = await W.api.sounding(lat, lon);
+      W.ui.renderSounding(hourly, label || `${lat.toFixed(2)}, ${lon.toFixed(2)}`, () => {
+        if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, label); updateFavButton();
+          const sb = document.getElementById("open-sounding");
+          if (sb) sb.addEventListener("click", () => showSounding(lat, lon, label)); }
+      });
+    } catch (e) {
+      alert(e.code === 429 ? "חרגת ממכסת Open-Meteo — נסה בעוד כמה דקות" : "שגיאת סאונדינג: " + e.message);
     } finally { W.ui.loading(false); }
   }
 
