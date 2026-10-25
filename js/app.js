@@ -224,6 +224,7 @@
   W.ui.buildLevels(W.levels, state.level, onLevelPick);
   W.ui.initSlider({
     onScrub: (i) => { renderAt(i); scheduleHash(); },
+    onDay: (i) => { renderAt(i); scheduleHash(); },
     onPlayToggle: () => (state.playTimer ? stopPlay() : startPlay()),
   });
 

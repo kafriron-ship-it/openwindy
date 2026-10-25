@@ -98,12 +98,13 @@
     },
 
     // ---- Time slider ---------------------------------------------------
-    _times: [], _onScrub: null,
-    initSlider({ onScrub, onPlayToggle }) {
-      this._onScrub = onScrub;
+    _times: [], _onScrub: null, _onDay: null,
+    initSlider({ onScrub, onPlayToggle, onDay }) {
+      this._onScrub = onScrub; this._onDay = onDay;
       const s = $("time-slider"), p = $("play-btn");
       s.addEventListener("input", () => {
         this._updateLabel(+s.value);
+        this.syncDayStrip();
         onScrub(+s.value);
       });
       p.addEventListener("click", onPlayToggle);
@@ -114,20 +115,54 @@
       s.max = String(Math.max(0, times.length - 1));
       s.step = String(W.config.sliderStep || 1);
       if (+s.value > +s.max) s.value = "0";
+      this.buildDayStrip(times);
       this._updateLabel(+s.value);
+    },
+    _dayChipLabel(d) {
+      const today = new Date(), tom = new Date(Date.now() + 86400000);
+      if (d.toDateString() === today.toDateString()) return W.t("today");
+      if (d.toDateString() === tom.toDateString()) return W.t("tomorrow");
+      const wd = d.toLocaleDateString(W.i18n.lang === "en" ? "en-US" : "he-IL", { weekday: "short" });
+      return `${wd} ${d.getDate()}/${d.getMonth() + 1}`;
+    },
+    buildDayStrip(times) {
+      const el = $("time-days");
+      el.innerHTML = "";
+      const byDay = {};
+      times.forEach((iso, i) => {
+        const d = toLocal(iso), key = d.toDateString();
+        (byDay[key] = byDay[key] || []).push({ i, d });
+      });
+      Object.keys(byDay).forEach((key) => {
+        const arr = byDay[key];
+        let noon = arr[0].i, bd = Infinity;
+        arr.forEach((x) => { const diff = Math.abs(x.d.getHours() - 12); if (diff < bd) { bd = diff; noon = x.i; } });
+        const chip = document.createElement("button");
+        chip.className = "day-chip"; chip.dataset.date = key; chip.dataset.idx = noon;
+        chip.textContent = this._dayChipLabel(arr[0].d);
+        chip.onclick = () => { this.setTimeIndex(noon); if (this._onDay) this._onDay(noon); };
+        el.appendChild(chip);
+      });
+      this.syncDayStrip();
+    },
+    syncDayStrip() {
+      const iso = this._times[this.getTimeIndex()];
+      if (!iso) return;
+      const key = toLocal(iso).toDateString();
+      $("time-days").querySelectorAll(".day-chip").forEach((c) => {
+        const on = c.dataset.date === key;
+        c.classList.toggle("active", on);
+        if (on) c.scrollIntoView({ inline: "center", block: "nearest" });
+      });
     },
     _updateLabel(i) {
       const iso = this._times[i];
       if (!iso) { $("time-label").textContent = "—"; return; }
       const d = toLocal(iso);
-      const now = new Date();
-      const sameDay = d.toDateString() === now.toDateString();
-      const tomorrow = new Date(now.getTime() + 86400000).toDateString() === d.toDateString();
-      let day = sameDay ? "היום" : tomorrow ? "מחר" : `יום ${daysShort[d.getDay()]} ${d.getDate()}/${d.getMonth()+1}`;
-      $("time-label").textContent = `${day} · ${hhmm(d)}`;
+      $("time-label").textContent = `${this._dayChipLabel(d)} · ${hhmm(d)}`;
     },
     getTimeIndex() { return +$("time-slider").value; },
-    setTimeIndex(i) { $("time-slider").value = String(i); this._updateLabel(i); },
+    setTimeIndex(i) { $("time-slider").value = String(i); this._updateLabel(i); this.syncDayStrip(); },
     setPlaying(on) {
       const p = $("play-btn");
       p.textContent = on ? "⏸" : "▶";
@@ -137,6 +172,7 @@
       $("timebar").style.opacity = on ? "1" : ".4";
       $("time-slider").disabled = !on;
       $("play-btn").disabled = !on;
+      $("time-days").classList.toggle("hidden", !on);
     },
 
     // ---- Panel + search (unchanged core) -------------------------------

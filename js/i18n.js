@@ -7,6 +7,7 @@
     search: "חפש עיר או מקום…",
     "levels.title": "גובה",
     "tools.title": "כלים",
+    today: "היום", tomorrow: "מחר",
     // layers
     "layer.wind": "רוח", "layer.gusts": "משבים", "layer.temp": "טמפ׳",
     "layer.clouds": "עננים", "layer.humidity": "לחות", "layer.pressure": "לחץ",
@@ -46,6 +47,7 @@
     search: "Search city or place…",
     "levels.title": "Altitude",
     "tools.title": "Tools",
+    today: "Today", tomorrow: "Tomorrow",
     "layer.wind": "Wind", "layer.gusts": "Gusts", "layer.temp": "Temp",
     "layer.clouds": "Clouds", "layer.humidity": "Humidity", "layer.pressure": "Pressure",
     "layer.waves": "Waves", "layer.aqi": "Air", "layer.storms": "Storms",
