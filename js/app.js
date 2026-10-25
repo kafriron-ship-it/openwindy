@@ -94,6 +94,7 @@
     W.ui.setActiveLayer(state.layer);
     W.ui.setActiveLevel(state.level);
     W.ui.setLevelsEnabled(!!altAware);
+    updateCrosshair();
 
     if (s.kind === "webcams") {
       W.ui.setSliderEnabled(false);
@@ -163,6 +164,7 @@
   // ---- Render at a time index (no network) ---------------------------
   function renderAt(ti) {
     if (!W.Field.grid) return;
+    updateCrosshair();
     const s = spec();
     if (s.kind === "wind") {
       W.wind.show(map, W.Field.velocityAt(ti, s.speedVar, s.dirVar));
@@ -392,6 +394,43 @@
     if (W.route.mode) { addWaypoint(e.latlng.lat, e.latlng.lng); return; }
     showForecast(e.latlng.lat, e.latlng.lng);
   });
+
+  // ---- Center crosshair picker (like Windy) --------------------------
+  function fmtScalar(layer, v) {
+    switch (layer) {
+      case "temp": return W.units.tempStr(v);
+      case "gusts": return W.units.windStr(v);
+      case "clouds": case "humidity": return Math.round(v) + "%";
+      case "pressure": return Math.round(v) + " hPa";
+      case "waves": return v.toFixed(1) + " מ'";
+      case "aqi": return Math.round(v) + " EAQI";
+      default: return Math.round(v);
+    }
+  }
+  function updateCrosshair() {
+    const el = document.getElementById("xh-readout");
+    const o = W.overlays[state.layer];
+    const c = map.getCenter();
+    const ti = W.ui.getTimeIndex();
+    let html = "📍";
+    if ((o.kind === "wind" || o.kind === "scalar") && W.Field.grid) {
+      const s = spec();
+      if (o.kind === "wind") {
+        const sp = W.Field.sampleAt(c.lat, c.lng, s.speedVar, ti);
+        const dr = W.Field.nearestAt(c.lat, c.lng, s.dirVar, ti);
+        if (sp != null) html = `<span class="xh-arrow" style="transform:rotate(${(dr || 0) + 180}deg)">↑</span> ${W.units.windStr(sp)}`;
+      } else {
+        const v = W.Field.sampleAt(c.lat, c.lng, s.scalarVar, ti);
+        if (v != null) html = fmtScalar(state.layer, v);
+      }
+    }
+    el.innerHTML = html;
+  }
+  document.getElementById("xh-readout").addEventListener("click", () => {
+    const c = map.getCenter();
+    showForecast(c.lat, c.lng);
+  });
+  map.on("move", updateCrosshair);
   document.getElementById("panel-close").addEventListener("click", () => W.ui.closePanel());
 
   // ---- Route planner -------------------------------------------------

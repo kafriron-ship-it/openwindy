@@ -49,6 +49,19 @@
     <input id="time-slider" type="range" min="0" max="0" value="0" step="1" />
   </div>
 
+  <!-- Center crosshair picker (like Windy) -->
+  <div id="crosshair">
+    <button id="xh-readout" class="xh-readout" title="לחץ לתחזית מלאה"></button>
+    <svg class="xh-mark" width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+      <circle cx="22" cy="22" r="11" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+      <circle cx="22" cy="22" r="2" fill="#fff"/>
+      <line x1="22" y1="2"  x2="22" y2="9"  stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+      <line x1="22" y1="35" x2="22" y2="42" stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+      <line x1="2"  y1="22" x2="9"  y2="22" stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+      <line x1="35" y1="22" x2="42" y2="22" stroke="#fff" stroke-width="1.5" opacity="0.85"/>
+    </svg>
+  </div>
+
   <!-- Forecast side panel -->
   <aside id="panel" class="hidden">
     <button id="panel-close" aria-label="סגור">×</button>

@@ -49,6 +49,40 @@
       ];
     },
 
+    // Bilinear-interpolate one variable at an arbitrary lat/lon for time ti.
+    sampleAt(lat, lon, variable, ti) {
+      const g = this.grid;
+      if (!g) return null;
+      const col = (lon - g.west) / g.dLon;      // 0..n-1 (west->east)
+      const row = (g.north - lat) / g.dLat;     // 0..n-1 (north->south)
+      if (col < 0 || col > g.n - 1 || row < 0 || row > g.n - 1) return null;
+      const i0 = Math.floor(col), j0 = Math.floor(row);
+      const i1 = Math.min(i0 + 1, g.n - 1), j1 = Math.min(j0 + 1, g.n - 1);
+      const fx = col - i0, fy = row - j0;
+      const val = (j, i) => {
+        const a = g.series[j * g.n + i][variable];
+        return a ? a[ti] : null;
+      };
+      const v00 = val(j0, i0), v10 = val(j0, i1), v01 = val(j1, i0), v11 = val(j1, i1);
+      if ([v00, v10, v01, v11].some((v) => v == null)) {
+        return v00 != null ? v00 : v10 != null ? v10 : v01 != null ? v01 : v11; // nearest fallback
+      }
+      const top = v00 * (1 - fx) + v10 * fx;
+      const bot = v01 * (1 - fx) + v11 * fx;
+      return top * (1 - fy) + bot * fy;
+    },
+
+    // Nearest grid value (for circular quantities like wind direction).
+    nearestAt(lat, lon, variable, ti) {
+      const g = this.grid;
+      if (!g) return null;
+      const i = Math.round((lon - g.west) / g.dLon);
+      const j = Math.round((g.north - lat) / g.dLat);
+      if (i < 0 || i > g.n - 1 || j < 0 || j > g.n - 1) return null;
+      const a = g.series[j * g.n + i][variable];
+      return a ? a[ti] : null;
+    },
+
     // Values for a scalar variable at a time index (row-major, null-safe).
     scalarAt(ti, variable) {
       const g = this.grid;

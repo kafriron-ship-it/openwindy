@@ -251,6 +251,24 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Ro
 .day .rng .min { color: var(--muted); }
 .day .pop { color: var(--accent); font-size: 12px; min-width: 38px; text-align: left; }
 
+/* Center crosshair picker */
+#crosshair {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 800; pointer-events: none; display: flex; flex-direction: column; align-items: center;
+}
+.xh-mark { filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.xh-readout {
+  pointer-events: auto; cursor: pointer; margin-bottom: 4px;
+  background: rgba(18,26,48,.95); color: #fff; border: 1px solid var(--accent);
+  border-radius: 10px; padding: 5px 11px; font-size: 14px; font-weight: 700;
+  white-space: nowrap; box-shadow: var(--shadow); min-height: 20px;
+  display: flex; align-items: center; gap: 6px; transition: transform .1s;
+}
+.xh-readout:hover { transform: scale(1.05); }
+.xh-readout:empty { display: none; }
+.xh-readout .xh-sub { font-size: 10px; font-weight: 500; color: var(--muted); }
+.xh-arrow { display: inline-block; transition: transform .2s; }
+
 /* First-run hint */
 #hint {
   position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
