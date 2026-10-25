@@ -188,7 +188,7 @@
         <text x="4" y="${tempTop + 4}" fill="#93a0bd" font-size="9">${W.units.tempStr(tMax)}</text>
         <text x="4" y="${tempBot}" fill="#93a0bd" font-size="9">${W.units.tempStr(tMin)}</text>
         ${bars}
-        <text x="${W0 - 2}" y="${pTop + 6}" fill="#39a0ff" font-size="9" text-anchor="end">${maxP.toFixed(1)}מ"מ</text>
+        <text x="${W0 - 2}" y="${pTop + 6}" fill="#39a0ff" font-size="9" text-anchor="end">${W.units.precipStr(maxP)}</text>
         ${wind}${labels}
       </svg>`;
     },
@@ -224,8 +224,8 @@
         <div class="metrics">
           <div class="metric"><div class="k">רוח</div><div class="v">${W.units.windStr(c.wind_speed_10m)}</div></div>
           <div class="metric"><div class="k">לחות</div><div class="v">${c.relative_humidity_2m}%</div></div>
-          <div class="metric"><div class="k">לחץ</div><div class="v">${Math.round(c.surface_pressure)} hPa</div></div>
-          <div class="metric"><div class="k">משקעים</div><div class="v">${c.precipitation} מ"מ</div></div></div>
+          <div class="metric"><div class="k">לחץ</div><div class="v">${W.units.presStr(c.surface_pressure)}</div></div>
+          <div class="metric"><div class="k">משקעים</div><div class="v">${W.units.precipStr(c.precipitation)}</div></div></div>
         <button id="open-sounding" class="rt-clear" style="margin:14px 0 0">📊 פרופיל אנכי (סאונדינג)</button>
         <div class="section-title">24 השעות הקרובות</div><div class="hourly">${hours.join("")}</div>
         <div class="section-title">מטאוגרמה — 48 שעות</div>
@@ -342,7 +342,7 @@
           ${ws.map((w) => {
             const dot = w.peak === 2 ? "🟢" : "🟡";
             const wind = `${Math.round(W.units.windVal(w.windMinMs))}–${Math.round(W.units.windVal(w.windMaxMs))} ${W.units.windUnit()}`;
-            const wave = w.waveMax != null ? ` · גל עד ${w.waveMax.toFixed(1)}מ'` : "";
+            const wave = w.waveMax != null ? ` · גל עד ${W.units.waveStr(w.waveMax)}` : "";
             return `<div class="sp-win"><span class="sp-dot">${dot}</span>
               <span class="sp-time">${hhmm(w.startTime)}–${hhmm(w.endTime)}</span>
               <span class="sp-cond">💨 ${wind}${wave}</span></div>`;
@@ -382,7 +382,7 @@
           <span class="rt-t">${r.temp != null ? W.units.tempStr(r.temp) : "—"}</span>
           <span class="rt-w">${r.wind != null ? "💨 " + W.units.windStr(r.wind) : ""}</span>
           <span class="rt-p">${r.precip > 0 ? "🌧️ " + r.precip + 'מ"מ' : ""}</span>
-          <span class="rt-km">${Math.round(r.km)} ק"מ</span>
+          <span class="rt-km">${W.units.distStr(r.km)}</span>
         </div>`;
       }).join("");
 
@@ -399,7 +399,7 @@
         </div>
         ${route.waypoints.length < 2
           ? `<div class="fav-empty">הוסף לפחות 2 נקודות כדי לראות תחזית לאורך המסלול.</div>`
-          : `<div class="rt-totals">מרחק כולל: <b>${Math.round(route.totalKm)} ק"מ</b> · זמן נסיעה: <b>${durStr}</b></div>
+          : `<div class="rt-totals">מרחק כולל: <b>${W.units.distStr(route.totalKm)}</b> · זמן נסיעה: <b>${durStr}</b></div>
              <div class="rt-list">${rows}</div>`}
         <button id="rt-clear" class="rt-clear">🗑️ נקה מסלול</button>
         <div class="loc-sub" style="margin-top:14px">התחזית מחושבת לכל נקודה לפי זמן ההגעה המשוער. נתונים: Open-Meteo</div>`;

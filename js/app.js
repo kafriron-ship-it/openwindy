@@ -176,8 +176,8 @@
       temp:     { title: `${W.t("legend.temp")}${lvl}`, colorFn: W.colorFor("temp"), min: -20, max: 45, unit: W.units.tempUnit(), fmt: tempFmt },
       clouds:   { title: W.t("legend.clouds"), colorFn: W.colorFor("cloud"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
       humidity: { title: W.t("legend.humidity"), colorFn: W.colorFor("humidity"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
-      pressure: { title: W.t("legend.pressure"), colorFn: W.colorFor("pressure"), min: 970, max: 1045, unit: "hPa", fmt: (v) => Math.round(v) },
-      waves:    { title: W.t("legend.waves"), colorFn: W.colorFor("waves"), min: 0, max: 6, unit: W.i18n.lang === "en" ? "m" : "מ'", fmt: (v) => v.toFixed(1) },
+      pressure: { title: W.t("legend.pressure"), colorFn: W.colorFor("pressure"), min: 970, max: 1045, unit: W.units.presUnit(), fmt: (v) => (W.units.pressure === "inhg" ? W.units.presVal(v).toFixed(1) : Math.round(W.units.presVal(v))) },
+      waves:    { title: W.t("legend.waves"), colorFn: W.colorFor("waves"), min: 0, max: 6, unit: W.units.waveUnit(), fmt: (v) => W.units.waveVal(v).toFixed(1) },
       aqi:      { title: W.t("legend.aqi"), colorFn: W.colorFor("aqi"), min: 0, max: 120, unit: "EAQI", fmt: (v) => Math.round(v) },
       storms:   { title: W.t("legend.storms"), colorFn: W.colorFor("cape"), min: 0, max: 3000, unit: "J/kg", fmt: (v) => Math.round(v) },
     };
@@ -427,6 +427,8 @@
     setToolText("tool-settings", "tool.settings");
     document.querySelector("#tool-lang b").textContent = W.t("tool.lang");
     document.querySelector("#tool-lang small").textContent = l === "en" ? "החלף שפה" : "Switch language";
+    const wl = l === "en" ? { ms: "m/s", kmh: "km/h", kt: "kt", mph: "mph" } : { ms: "m/s", kmh: 'קמ"ש', kt: "קשר", mph: "mph" };
+    document.querySelectorAll('#settings-popover [data-pref="wind"] button').forEach((b) => { b.textContent = wl[b.dataset.v]; });
     W.ui.buildLayers(W.overlays, state.layer, onLayerPick);
     W.ui.buildLevels(W.levels, state.level, onLevelPick);
     W.ui.setActiveLayer(state.layer); W.ui.setActiveLevel(state.level);
@@ -445,19 +447,26 @@
   // ---- Settings (units) ----------------------------------------------
   const setPop = document.getElementById("settings-popover");
   function syncSegs() {
-    document.querySelectorAll("#seg-temp button").forEach((b) =>
-      b.classList.toggle("active", b.dataset.v === W.units.temp));
-    document.querySelectorAll("#seg-wind button").forEach((b) =>
-      b.classList.toggle("active", b.dataset.v === W.units.wind));
+    document.querySelectorAll("#settings-popover .seg[data-pref]").forEach((seg) => {
+      const pref = seg.dataset.pref;
+      seg.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.v === W.units[pref]));
+    });
+    const u = W.units;
+    const isImp = u.temp === "f" && u.wind === "mph" && u.pressure === "inhg" && u.precip === "in" && u.dist === "mi" && u.wave === "ft";
+    const isMet = u.temp === "c" && u.wind === "ms" && u.pressure === "hpa" && u.precip === "mm" && u.dist === "km" && u.wave === "m";
+    document.querySelectorAll("#seg-system button").forEach((b) =>
+      b.classList.toggle("active", (b.dataset.sys === "imperial" && isImp) || (b.dataset.sys === "metric" && isMet)));
   }
-  document.querySelectorAll("#seg-temp button").forEach((b) =>
-    b.addEventListener("click", () => { W.units.set({ temp: b.dataset.v }); onUnitsChange(); }));
-  document.querySelectorAll("#seg-wind button").forEach((b) =>
-    b.addEventListener("click", () => { W.units.set({ wind: b.dataset.v }); onUnitsChange(); }));
+  document.querySelectorAll("#settings-popover .seg[data-pref] button").forEach((b) =>
+    b.addEventListener("click", () => {
+      W.units.set({ [b.parentElement.dataset.pref]: b.dataset.v }); onUnitsChange();
+    }));
+  document.querySelectorAll("#seg-system button").forEach((b) =>
+    b.addEventListener("click", () => { W.units.setSystem(b.dataset.sys); onUnitsChange(); }));
   function onUnitsChange() {
     syncSegs();
     const o = W.overlays[state.layer];
-    if (o.kind === "wind" || o.kind === "scalar") setLegendFor();
+    if (o.kind === "wind" || o.kind === "scalar") { setLegendFor(); updateCrosshair(); }
     if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, state.lastPoint.label); updateFavButton(); }
   }
   document.addEventListener("click", (e) => {
@@ -476,8 +485,8 @@
       case "temp": return W.units.tempStr(v);
       case "gusts": return W.units.windStr(v);
       case "clouds": case "humidity": return Math.round(v) + "%";
-      case "pressure": return Math.round(v) + " hPa";
-      case "waves": return v.toFixed(1) + " מ'";
+      case "pressure": return W.units.presStr(v);
+      case "waves": return W.units.waveStr(v);
       case "aqi": return Math.round(v) + " EAQI";
       case "storms": return Math.round(v) + " J/kg";
       default: return Math.round(v);

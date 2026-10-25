@@ -70,10 +70,20 @@
 
   <!-- Settings popover -->
   <div id="settings-popover" class="hidden">
+    <div class="set-group"><span>מערכת</span>
+      <div class="seg" id="seg-system"><button data-sys="metric">מטרי</button><button data-sys="imperial">אימפריאלי</button></div></div>
     <div class="set-group"><span>טמפרטורה</span>
-      <div class="seg" id="seg-temp"><button data-v="c">°C</button><button data-v="f">°F</button></div></div>
+      <div class="seg" data-pref="temp"><button data-v="c">°C</button><button data-v="f">°F</button></div></div>
     <div class="set-group"><span>רוח</span>
-      <div class="seg" id="seg-wind"><button data-v="ms">m/s</button><button data-v="kmh">קמ"ש</button><button data-v="kt">קשר</button></div></div>
+      <div class="seg" data-pref="wind"><button data-v="ms">m/s</button><button data-v="kmh">קמ"ש</button><button data-v="kt">קשר</button><button data-v="mph">mph</button></div></div>
+    <div class="set-group"><span>לחץ</span>
+      <div class="seg" data-pref="pressure"><button data-v="hpa">hPa</button><button data-v="inhg">inHg</button><button data-v="mmhg">mmHg</button></div></div>
+    <div class="set-group"><span>משקעים</span>
+      <div class="seg" data-pref="precip"><button data-v="mm">mm</button><button data-v="in">in</button></div></div>
+    <div class="set-group"><span>מרחק</span>
+      <div class="seg" data-pref="dist"><button data-v="km">km</button><button data-v="mi">mi</button></div></div>
+    <div class="set-group"><span>גלים</span>
+      <div class="seg" data-pref="wave"><button data-v="m">m</button><button data-v="ft">ft</button></div></div>
     <div class="set-webcam">
       <div class="sw-title">🎥 מצלמות (Windy Webcams)</div>
       <div class="sw-row"><input id="webcam-key" type="text" placeholder="הדבק מפתח API חינמי" />
