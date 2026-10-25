@@ -2,6 +2,13 @@
 (function (W) {
   const C = W.config;
 
+  // Optional self-hosted Open-Meteo base (set in settings) to bypass rate limits.
+  function omBase() { try { return localStorage.getItem("ow_om_base") || ""; } catch (e) { return ""; } }
+  function forecastEP() {
+    const b = omBase();
+    return b ? b.replace(/\/+$/, "") + "/v1/forecast" : C.forecastUrl;
+  }
+
   async function getJSON(url) {
     const res = await fetch(url);
     if (res.status === 429) { const e = new Error("rate-limit"); e.code = 429; throw e; }
@@ -41,7 +48,7 @@
         forecast_days: "7",
       });
       if (model && model !== "best_match") params.set("models", model);
-      return getJSON(`${C.forecastUrl}?${params}`);
+      return getJSON(`${forecastEP()}?${params}`);
     },
 
     async geocode(name) {
@@ -58,7 +65,7 @@
       const base = { latitude: g.lats.join(","), longitude: g.lons.join(","),
         hourly: variables.join(","), timezone: "GMT",
         forecast_days: String(C.forecastDays) };
-      let endpoint = C.forecastUrl;
+      let endpoint = forecastEP();
       if (opts.marine) endpoint = C.marineUrl;
       else if (opts.airquality) endpoint = C.airQualityUrl;
       else {
@@ -83,7 +90,6 @@
     // Hourly forecast for a list of exact points (route waypoints). One request.
     async multiPointHourly(points, variables) {
       if (!points.length) return { times: [], series: [] };
-      const trip = points.length;
       const params = new URLSearchParams({
         latitude: points.map((p) => p.lat.toFixed(4)).join(","),
         longitude: points.map((p) => p.lon.toFixed(4)).join(","),
@@ -91,7 +97,7 @@
         forecast_days: "7",
         wind_speed_unit: C.units.windSpeed, temperature_unit: C.units.temperature,
       });
-      const data = await getJSON(`${C.forecastUrl}?${params}`);
+      const data = await getJSON(`${forecastEP()}?${params}`);
       const arr = Array.isArray(data) ? data : [data];
       const times = (arr[0] && arr[0].hourly && arr[0].hourly.time) || [];
       const series = arr.map((r) => {
@@ -114,8 +120,26 @@
         hourly: vars.join(","), forecast_days: "1",
         wind_speed_unit: C.units.windSpeed, temperature_unit: "celsius",
       });
-      const data = await getJSON(`${C.forecastUrl}?${params}`);
+      const data = await getJSON(`${forecastEP()}?${params}`);
       return data.hourly || {};
+    },
+
+    // Windy Webcams API v3 — needs the user's own free key (x-windy-api-key).
+    async webcams(bounds, key) {
+      const c = bounds.getCenter();
+      const radiusKm = Math.min(250, Math.max(10,
+        Math.round(c.distanceTo(bounds.getNorthEast()) / 1000)));
+      const params = new URLSearchParams({
+        nearby: `${c.lat.toFixed(3)},${c.lng.toFixed(3)},${radiusKm}`,
+        include: "images,location,player", limit: "50",
+      });
+      const res = await fetch(
+        `https://api.windy.com/webcams/api/v3/webcams?${params}`,
+        { headers: { "x-windy-api-key": key } });
+      if (res.status === 401 || res.status === 403) { const e = new Error("bad-key"); e.code = res.status; throw e; }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const d = await res.json();
+      return d.webcams || d.result || [];
     },
 
     async rainviewer() {

@@ -62,6 +62,18 @@
       <div class="seg" id="seg-temp"><button data-v="c">°C</button><button data-v="f">°F</button></div></div>
     <div class="set-group"><span>רוח</span>
       <div class="seg" id="seg-wind"><button data-v="ms">m/s</button><button data-v="kmh">קמ"ש</button><button data-v="kt">קשר</button></div></div>
+    <div class="set-webcam">
+      <div class="sw-title">🎥 מצלמות (Windy Webcams)</div>
+      <div class="sw-row"><input id="webcam-key" type="text" placeholder="הדבק מפתח API חינמי" />
+        <button id="webcam-save">שמור</button></div>
+      <a class="sw-link" href="https://www.windy.com/webcams" target="_blank" rel="noopener">איך משיגים מפתח חינמי?</a>
+    </div>
+    <div class="set-webcam">
+      <div class="sw-title">🖥️ שרת Open-Meteo עצמאי</div>
+      <div class="sw-row"><input id="om-base" type="text" placeholder="http://localhost:8080" />
+        <button id="om-save">שמור</button></div>
+      <div class="sw-note">מבטל את מגבלת המכסה. השאר ריק לשימוש בשרת הציבורי.</div>
+    </div>
   </div>
 
   <!-- Favorites popover -->

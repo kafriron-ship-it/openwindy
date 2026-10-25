@@ -43,6 +43,45 @@
     W.wind.remove(map);
     if (state.scalar) { map.removeLayer(state.scalar); state.scalar = null; }
     if (state.radar) { map.removeLayer(state.radar); state.radar = null; }
+    if (state.webcamGroup) { map.removeLayer(state.webcamGroup); state.webcamGroup = null; }
+  }
+
+  // ---- Webcams (Windy Webcams API — needs the user's own free key) ----
+  const getWindyKey = () => { try { return localStorage.getItem("ow_windy_key") || ""; } catch (e) { return ""; } };
+  async function loadWebcams() {
+    if (state.webcamGroup) { map.removeLayer(state.webcamGroup); state.webcamGroup = null; }
+    const key = getWindyKey();
+    if (!key) {
+      W.ui.setLegend("🎥 מצלמות — הזן מפתח חינמי בהגדרות (⚙) כדי להפעיל");
+      return;
+    }
+    W.ui.loading(true);
+    try {
+      const cams = await W.api.webcams(map.getBounds(), key);
+      state.webcamGroup = L.layerGroup().addTo(map);
+      let shown = 0;
+      cams.forEach((cam) => {
+        const loc = cam.location || {};
+        const lat = loc.latitude, lon = loc.longitude;
+        if (lat == null || lon == null) return;
+        const imgs = cam.images || {};
+        const img = (imgs.current && (imgs.current.preview || imgs.current.thumbnail)) || imgs.preview || "";
+        const p = cam.player || {};
+        const live = p.live || p.day || p.month || p.lifetime || "";
+        const icon = L.divIcon({ className: "", html: '<div class="webcam-pin">📷</div>',
+          iconSize: [24, 24], iconAnchor: [12, 12] });
+        const m = L.marker([lat, lon], { icon }).addTo(state.webcamGroup);
+        m.bindPopup(`<div class="wc-pop"><div class="wc-t">${cam.title || "מצלמה"}</div>` +
+          (img ? `<img src="${img}" loading="lazy"/>` : "") +
+          (live ? `<a href="${live}" target="_blank" rel="noopener">▶ צפייה חיה</a>` : "") + `</div>`);
+        shown++;
+      });
+      W.ui.setLegend(`🎥 ${shown} מצלמות באזור (Windy Webcams)`);
+    } catch (e) {
+      W.ui.setLegend(e.code === 401 || e.code === 403
+        ? "🎥 מפתח לא תקין — בדוק בהגדרות (⚙)"
+        : "🎥 שגיאה בטעינת מצלמות");
+    } finally { W.ui.loading(false); }
   }
 
   // ---- Build active layer (fetches field) ----------------------------
@@ -55,6 +94,12 @@
     W.ui.setActiveLayer(state.layer);
     W.ui.setActiveLevel(state.level);
     W.ui.setLevelsEnabled(!!altAware);
+
+    if (s.kind === "webcams") {
+      W.ui.setSliderEnabled(false);
+      await loadWebcams();
+      return;
+    }
 
     if (s.kind === "radar" || s.kind === "satellite") {
       W.ui.setSliderEnabled(false);
@@ -161,13 +206,33 @@
     if (state.lastPoint) showForecast(state.lastPoint.lat, state.lastPoint.lon, state.lastPoint.label);
   });
 
-  // Reload field when view changes (debounced)
+  // Webcams key field
+  const wkInput = document.getElementById("webcam-key");
+  wkInput.value = getWindyKey();
+  document.getElementById("webcam-save").addEventListener("click", () => {
+    try { localStorage.setItem("ow_windy_key", wkInput.value.trim()); } catch (e) {}
+    document.getElementById("settings-popover").classList.add("hidden");
+    if (state.layer === "webcams") buildLayer();
+  });
+
+  // Self-hosted Open-Meteo base field
+  const omInput = document.getElementById("om-base");
+  try { omInput.value = localStorage.getItem("ow_om_base") || ""; } catch (e) {}
+  document.getElementById("om-save").addEventListener("click", () => {
+    try { localStorage.setItem("ow_om_base", omInput.value.trim()); } catch (e) {}
+    document.getElementById("settings-popover").classList.add("hidden");
+    W.Field._key = null; // invalidate cache so next load hits the new endpoint
+    buildLayer();
+  });
+
+  // Reload when view changes (debounced)
   let moveTimer = null;
   map.on("moveend", () => {
     const s = spec();
-    if (s.kind === "radar") return;
+    if (s.kind === "radar" || s.kind === "satellite") return;
     clearTimeout(moveTimer);
     moveTimer = setTimeout(async () => {
+      if (s.kind === "webcams") { loadWebcams(); return; }
       try {
         await W.Field.load(map.getBounds(), s.vars,
           { marine: s.marine, airquality: s.airquality, model: s.model });

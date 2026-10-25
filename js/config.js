@@ -54,6 +54,7 @@ W.overlays = {
   aqi:      { label: "אוויר", kind: "scalar", colorFn: "aqi",      var: "european_aqi", airquality: true, opacity: 0.6 },
   rain:     { label: "ראדאר", kind: "radar" },
   satellite:{ label: "לוויין", kind: "satellite" },
+  webcams:  { label: "מצלמות", kind: "webcams" },
 };
 
 // WMO weather codes -> emoji + Hebrew text

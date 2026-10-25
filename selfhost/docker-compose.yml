@@ -1,0 +1,33 @@
+# OpenWindy — self-hosted Open-Meteo API (removes the public free-tier rate limit).
+#
+# Prerequisite: Docker Desktop (https://www.docker.com/products/docker-desktop/).
+#
+# Run it:
+#     cd selfhost
+#     docker compose up -d
+#
+# Then in OpenWindy open Settings (⚙) and set
+#     "שרת Open-Meteo עצמאי"  ->  http://localhost:8080
+#
+# How it works: instead of pre-downloading tens of GB of model data, this streams
+# the data on demand from Open-Meteo's public S3 bucket and caches it locally
+# (CACHE_SIZE). First requests for a new area are a bit slower; repeats are instant.
+# No API key, no request limit — it's your own instance.
+
+volumes:
+  open-meteo-data:
+
+services:
+  open-meteo:
+    image: ghcr.io/open-meteo/open-meteo
+    container_name: openwindy-openmeteo
+    volumes:
+      - open-meteo-data:/app/data
+    environment:
+      # Stream + cache model data from the public bucket (no manual sync needed).
+      REMOTE_DATA_DIRECTORY: https://openmeteo.s3.amazonaws.com/data/
+      CACHE_SIZE: 8GB
+    ports:
+      # Exposed only to this machine. The browser reaches it at http://localhost:8080
+      - '127.0.0.1:8080:8080'
+    restart: always
