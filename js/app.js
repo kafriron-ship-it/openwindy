@@ -43,7 +43,15 @@
     W.wind.remove(map);
     if (state.scalar) { map.removeLayer(state.scalar); state.scalar = null; }
     if (state.radar) { map.removeLayer(state.radar); state.radar = null; }
+    if (state.radarAnim) { state.radarAnim.layers.forEach((l) => map.removeLayer(l)); state.radarAnim = null; }
     if (state.webcamGroup) { map.removeLayer(state.webcamGroup); state.webcamGroup = null; }
+  }
+  const isRadar = () => W.overlays[state.layer].kind === "radar";
+  function renderRadarAt(i) {
+    const a = state.radarAnim; if (!a) return;
+    a.layers.forEach((l, idx) => l.setOpacity(idx === i ? 0.75 : 0));
+    const f = a.frames[i];
+    if (f) W.ui.setLegend(`🌧️ ראדאר · ${f.time > Date.now() / 1000 ? "תחזית" : "עבר"} · כחול=קל · סגול=חזק`);
   }
 
   // ---- Webcams (Windy Webcams API — needs the user's own free key) ----
@@ -102,21 +110,36 @@
       return;
     }
 
-    if (s.kind === "radar" || s.kind === "satellite") {
+    if (s.kind === "satellite") {
       W.ui.setSliderEnabled(false);
       W.ui.loading(true);
       try {
-        if (s.kind === "satellite") {
-          state.radar = W.satelliteTiles().addTo(map);
-          W.ui.setLegend("🛰️ לוויין MODIS (צבע אמיתי, NASA) — תמונה יומית, זום עד 9");
-        } else {
-          const rv = await W.api.rainviewer();
-          if (rv.radar.length) {
-            state.radar = W.radarTiles(rv.host, rv.radar[rv.radar.length - 1]).addTo(map);
-            W.ui.setLegend("🌧️ ראדאר משקעים בזמן אמת (RainViewer)");
-          } else W.ui.setLegend("אין כרגע נתוני ראדאר");
-        }
+        state.radar = W.satelliteTiles().addTo(map);
+        W.ui.setLegend("🛰️ לוויין MODIS (צבע אמיתי, NASA) — תמונה יומית, זום עד 9");
       } catch (e) { alert("שגיאה: " + e.message); }
+      finally { W.ui.loading(false); }
+      return;
+    }
+
+    if (s.kind === "radar") {
+      W.ui.loading(true);
+      try {
+        const rv = await W.api.rainviewer();
+        if (!rv.radar.length) { W.ui.setSliderEnabled(false); W.ui.setLegend("אין כרגע נתוני ראדאר"); return; }
+        state.radarAnim = { host: rv.host, frames: rv.radar, layers: [] };
+        rv.radar.forEach((f) => {
+          const t = W.radarTiles(rv.host, f); t.setOpacity(0); t.addTo(map);
+          state.radarAnim.layers.push(t);
+        });
+        const times = rv.radar.map((f) => new Date(f.time * 1000).toISOString().slice(0, 16));
+        W.ui.setSliderEnabled(true);
+        W.ui.setTimes(times);
+        // default to the frame closest to "now"
+        let nowIdx = 0, best = Infinity;
+        rv.radar.forEach((f, i) => { const d = Math.abs(f.time * 1000 - Date.now()); if (d < best) { best = d; nowIdx = i; } });
+        W.ui.setTimeIndex(nowIdx);
+        renderRadarAt(nowIdx);
+      } catch (e) { W.ui.setSliderEnabled(false); W.ui.setLegend("שגיאה בטעינת ראדאר"); }
       finally { W.ui.loading(false); }
       return;
     }
@@ -156,6 +179,7 @@
       pressure: { title: "🎈 לחץ ברומטרי", colorFn: W.colorFor("pressure"), min: 970, max: 1045, unit: "hPa", fmt: (v) => Math.round(v) },
       waves:    { title: "🌊 גובה גלים", colorFn: W.colorFor("waves"), min: 0, max: 6, unit: "מ'", fmt: (v) => v.toFixed(1) },
       aqi:      { title: "😷 איכות אוויר", colorFn: W.colorFor("aqi"), min: 0, max: 120, unit: "EAQI", fmt: (v) => Math.round(v) },
+      storms:   { title: "⛈️ פוטנציאל סופות", colorFn: W.colorFor("cape"), min: 0, max: 3000, unit: "J/kg", fmt: (v) => Math.round(v) },
     };
     const spec = specs[state.layer];
     if (spec) W.ui.setScaleLegend(spec);
@@ -163,6 +187,7 @@
 
   // ---- Render at a time index (no network) ---------------------------
   function renderAt(ti) {
+    if (isRadar()) { renderRadarAt(ti); return; }
     if (!W.Field.grid) return;
     updateCrosshair();
     const s = spec();
@@ -178,7 +203,8 @@
   function startPlay() {
     if (state.playTimer) return;
     W.ui.setPlaying(true);
-    const max = W.Field.times.length - 1, step = C.sliderStep || 1;
+    const frameCount = isRadar() ? (state.radarAnim ? state.radarAnim.frames.length : 0) : W.Field.times.length;
+    const max = frameCount - 1, step = C.sliderStep || 1;
     state.playTimer = setInterval(() => {
       let i = W.ui.getTimeIndex() + step;
       if (i > max) i = 0;
@@ -192,10 +218,10 @@
   }
 
   // ---- Build control bars + wiring -----------------------------------
-  W.ui.buildLayers(W.overlays, state.layer, (key) => { state.layer = key; buildLayer(); });
-  W.ui.buildLevels(W.levels, state.level, (id) => { state.level = id; buildLayer(); });
+  W.ui.buildLayers(W.overlays, state.layer, (key) => { state.layer = key; buildLayer(); scheduleHash(); });
+  W.ui.buildLevels(W.levels, state.level, (id) => { state.level = id; buildLayer(); scheduleHash(); });
   W.ui.initSlider({
-    onScrub: (i) => renderAt(i),
+    onScrub: (i) => { renderAt(i); scheduleHash(); },
     onPlayToggle: () => (state.playTimer ? stopPlay() : startPlay()),
   });
 
@@ -208,7 +234,7 @@
   modelSel.value = state.model;
   modelSel.addEventListener("change", () => {
     state.model = modelSel.value;
-    buildLayer();
+    buildLayer(); scheduleHash();
     if (state.lastPoint) showForecast(state.lastPoint.lat, state.lastPoint.lon, state.lastPoint.label);
   });
 
@@ -411,33 +437,44 @@
       case "pressure": return Math.round(v) + " hPa";
       case "waves": return v.toFixed(1) + " מ'";
       case "aqi": return Math.round(v) + " EAQI";
+      case "storms": return Math.round(v) + " J/kg";
       default: return Math.round(v);
     }
   }
-  function updateCrosshair() {
-    const el = document.getElementById("xh-readout");
+  function layerValueHTML(lat, lon) {
     const o = W.overlays[state.layer];
-    const c = map.getCenter();
-    const ti = W.ui.getTimeIndex();
-    let html = "📍";
-    if ((o.kind === "wind" || o.kind === "scalar") && W.Field.grid) {
-      const s = spec();
-      if (o.kind === "wind") {
-        const sp = W.Field.sampleAt(c.lat, c.lng, s.speedVar, ti);
-        const dr = W.Field.nearestAt(c.lat, c.lng, s.dirVar, ti);
-        if (sp != null) html = `<span class="xh-arrow" style="transform:rotate(${(dr || 0) + 180}deg)">↑</span> ${W.units.windStr(sp)}`;
-      } else {
-        const v = W.Field.sampleAt(c.lat, c.lng, s.scalarVar, ti);
-        if (v != null) html = fmtScalar(state.layer, v);
-      }
+    if (!(o.kind === "wind" || o.kind === "scalar") || !W.Field.grid) return null;
+    const s = spec(), ti = W.ui.getTimeIndex();
+    if (o.kind === "wind") {
+      const sp = W.Field.sampleAt(lat, lon, s.speedVar, ti);
+      if (sp == null) return null;
+      const dr = W.Field.nearestAt(lat, lon, s.dirVar, ti);
+      return `<span class="xh-arrow" style="transform:rotate(${(dr || 0) + 180}deg)">↑</span> ${W.units.windStr(sp)}`;
     }
-    el.innerHTML = html;
+    const v = W.Field.sampleAt(lat, lon, s.scalarVar, ti);
+    return v == null ? null : fmtScalar(state.layer, v);
+  }
+  function updateCrosshair() {
+    document.getElementById("xh-readout").innerHTML =
+      layerValueHTML(map.getCenter().lat, map.getCenter().lng) || "📍";
   }
   document.getElementById("xh-readout").addEventListener("click", () => {
     const c = map.getCenter();
     showForecast(c.lat, c.lng);
   });
   map.on("move", updateCrosshair);
+
+  // Value-at-cursor tooltip (desktop hover)
+  const cursorEl = document.getElementById("cursor-val");
+  map.on("mousemove", (e) => {
+    const html = layerValueHTML(e.latlng.lat, e.latlng.lng);
+    if (!html) { cursorEl.classList.add("hidden"); return; }
+    cursorEl.innerHTML = html;
+    cursorEl.style.left = e.originalEvent.clientX + "px";
+    cursorEl.style.top = e.originalEvent.clientY + "px";
+    cursorEl.classList.remove("hidden");
+  });
+  map.on("mouseout", () => cursorEl.classList.add("hidden"));
 
   // Crosshair on/off toggle (persisted), driven from the Tools menu
   let xhOn = true;
@@ -539,11 +576,82 @@
     setTimeout(dismissHint, 12000);
   }
 
-  // ---- Boot ----------------------------------------------------------
-  buildLayer();
-  if (navigator.geolocation) {
+  // ---- Shareable URL state: #zoom/lat/lon/layer/level/model/timeIndex ----
+  let hashTimer = null, applyingHash = false;
+  function serializeState() {
+    const c = map.getCenter();
+    return [map.getZoom(), c.lat.toFixed(3), c.lng.toFixed(3),
+      state.layer, state.level, state.model, W.ui.getTimeIndex()].join("/");
+  }
+  function scheduleHash() {
+    if (applyingHash) return;
+    clearTimeout(hashTimer);
+    hashTimer = setTimeout(() => {
+      try { history.replaceState(null, "", "#" + serializeState()); } catch (e) {}
+    }, 400);
+  }
+  function parseHash() {
+    const h = decodeURIComponent((location.hash || "").replace(/^#/, ""));
+    if (!h) return null;
+    const p = h.split("/");
+    if (p.length < 3 || !isFinite(+p[1]) || !isFinite(+p[2])) return null;
+    return { zoom: +p[0] || 7, lat: +p[1], lon: +p[2],
+      layer: p[3], level: p[4], model: p[5], ti: p[6] != null ? +p[6] : 0 };
+  }
+  map.on("moveend", scheduleHash);
+
+  // Share
+  function showToast(msg, ms) {
+    const t = document.getElementById("toast");
+    t.textContent = msg; t.classList.remove("hidden");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => t.classList.add("hidden"), ms || 2200);
+  }
+  document.getElementById("tool-share").addEventListener("click", async (e) => {
+    e.stopPropagation(); closeTools();
+    try { history.replaceState(null, "", "#" + serializeState()); } catch (e2) {}
+    const url = location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: "OpenWindy", url });
+      else { await navigator.clipboard.writeText(url); showToast("🔗 הקישור הועתק!"); }
+    } catch (err) {
+      try { await navigator.clipboard.writeText(url); showToast("🔗 הקישור הועתק!"); }
+      catch (e3) { showToast(url, 5000); }
+    }
+  });
+
+  // My location
+  const locateBtn = document.getElementById("locate-btn");
+  locateBtn.addEventListener("click", () => {
+    if (!navigator.geolocation) { showToast("איתור מיקום לא נתמך"); return; }
+    locateBtn.classList.add("loading");
     navigator.geolocation.getCurrentPosition(
-      (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 7),
-      () => {}, { timeout: 4000 });
+      (pos) => {
+        locateBtn.classList.remove("loading");
+        map.setView([pos.coords.latitude, pos.coords.longitude], 9);
+      },
+      () => { locateBtn.classList.remove("loading"); showToast("לא ניתן לאתר מיקום"); },
+      { timeout: 8000, enableHighAccuracy: true });
+  });
+
+  // ---- Boot ----------------------------------------------------------
+  const initial = parseHash();
+  if (initial) {
+    applyingHash = true;
+    if (initial.layer && W.overlays[initial.layer]) state.layer = initial.layer;
+    if (initial.level && W.levels.find((l) => l.id === initial.level)) state.level = initial.level;
+    if (initial.model && W.models.find((m) => m.id === initial.model)) { state.model = initial.model; modelSel.value = state.model; }
+    map.setView([initial.lat, initial.lon], initial.zoom);
+    buildLayer().then(() => {
+      if (initial.ti) { W.ui.setTimeIndex(initial.ti); renderAt(initial.ti); }
+      applyingHash = false; scheduleHash();
+    });
+  } else {
+    buildLayer();
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 7),
+        () => {}, { timeout: 4000 });
+    }
   }
 })(window.W);

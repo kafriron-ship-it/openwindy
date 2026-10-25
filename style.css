@@ -40,6 +40,36 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Ro
 
 #crosshair.hidden { display: none; }
 
+/* My-location button */
+#locate-btn {
+  position: fixed; top: 86px; left: 10px; z-index: 850;
+  width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+  background: rgba(18,26,48,.95); color: var(--text); border: 1px solid var(--border);
+  font-size: 18px; box-shadow: var(--shadow);
+}
+#locate-btn:hover { border-color: var(--accent); }
+#locate-btn.loading { opacity: .5; pointer-events: none; }
+
+/* Toast */
+#toast {
+  position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%);
+  z-index: 2100; background: rgba(18,26,48,.97); color: var(--text);
+  border: 1px solid var(--accent); border-radius: 10px; padding: 10px 18px;
+  font-size: 14px; font-weight: 600; box-shadow: var(--shadow);
+  animation: hintIn .2s ease;
+}
+#toast.hidden { display: none; }
+
+/* Cursor value tooltip */
+#cursor-val {
+  position: fixed; z-index: 820; pointer-events: none;
+  background: rgba(11,16,32,.9); color: #fff; border: 1px solid var(--border);
+  border-radius: 7px; padding: 3px 8px; font-size: 13px; font-weight: 700;
+  white-space: nowrap; transform: translate(14px, 14px);
+}
+#cursor-val.hidden { display: none; }
+#cursor-val .xh-arrow { display: inline-block; }
+
 #tools-popover { left: 20px; min-width: 250px; }
 #tools-popover.hidden { display: none; }
 .tool-item {

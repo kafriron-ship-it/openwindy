@@ -6,12 +6,7 @@
     show(map, data) {
       if (this._layer) { this._layer.setData(data); return; }
       this._layer = L.velocityLayer({
-        displayValues: true,
-        displayOptions: {
-          velocityType: "רוח", position: "bottomleft",
-          emptyString: "אין נתוני רוח", angleConvention: "bearingCW",
-          speedUnit: "m/s", directionString: "כיוון", speedString: "מהירות",
-        },
+        displayValues: false,
         data,
         minVelocity: 0, maxVelocity: 40, velocityScale: 0.01,
         particleAge: 90, lineWidth: 1.2, particleMultiplier: 1 / 300,

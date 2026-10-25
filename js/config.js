@@ -53,6 +53,7 @@ W.overlays = {
   pressure: { label: "לחץ",   kind: "scalar", colorFn: "pressure", var: "pressure_msl", opacity: 0.5 },
   waves:    { label: "גלים",  kind: "scalar", colorFn: "waves",    var: "wave_height", marine: true, opacity: 0.7 },
   aqi:      { label: "אוויר", kind: "scalar", colorFn: "aqi",      var: "european_aqi", airquality: true, opacity: 0.6 },
+  storms:   { label: "סופות", kind: "scalar", colorFn: "cape",     var: "cape", opacity: 0.6 },
   rain:     { label: "ראדאר", kind: "radar" },
   satellite:{ label: "לוויין", kind: "satellite" },
   webcams:  { label: "מצלמות", kind: "webcams" },

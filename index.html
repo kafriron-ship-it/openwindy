@@ -97,6 +97,7 @@
     <button class="tool-item" id="tool-route"><span class="ti-ic">🧭</span><span class="ti-txt"><b>תכנון מסלול</b><small>תחזית בכל נקודה לאורך הדרך</small></span></button>
     <button class="tool-item" id="tool-fav"><span class="ti-ic">⭐</span><span class="ti-txt"><b>ספוטים והתראות</b><small>שמור ספוט + ספורט לקבלת חלונות טובים</small></span></button>
     <button class="tool-item" id="tool-xh"><span class="ti-ic">🎯</span><span class="ti-txt"><b>כוונת מרכז</b><small class="tool-xh-state"></small></span></button>
+    <button class="tool-item" id="tool-share"><span class="ti-ic">🔗</span><span class="ti-txt"><b>שתף מפה</b><small>העתק קישור למיקום והשכבה הנוכחיים</small></span></button>
     <button class="tool-item" id="tool-settings"><span class="ti-ic">⚙</span><span class="ti-txt"><b>הגדרות</b><small>יחידות, מצלמות, שרת עצמאי</small></span></button>
   </div>
 
@@ -111,6 +112,10 @@
       <span>⭐ שמרו ספוט ובחרו ספורט להתראות</span>
     </div>
   </div>
+
+  <button id="locate-btn" title="המיקום שלי">📍</button>
+  <div id="toast" class="hidden"></div>
+  <div id="cursor-val" class="hidden"></div>
 
   <div id="loader" class="hidden"><div class="spinner"></div></div>
   <div id="legend"></div>
