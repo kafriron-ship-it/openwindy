@@ -171,15 +171,15 @@
     const windFmt = (v) => Math.round(W.units.windVal(v));
     const tempFmt = (v) => Math.round(W.units.tempVal(v));
     const specs = {
-      wind:     { title: `💨 מהירות רוח${lvl}`, colorFn: W.colorFor("wind"), min: 0, max: 35, unit: W.units.windUnit(), fmt: windFmt },
-      gusts:    { title: "🌬️ משבי רוח", colorFn: W.colorFor("wind"), min: 0, max: 40, unit: W.units.windUnit(), fmt: windFmt },
-      temp:     { title: `🌡️ טמפרטורה${lvl}`, colorFn: W.colorFor("temp"), min: -20, max: 45, unit: W.units.tempUnit(), fmt: tempFmt },
-      clouds:   { title: "☁️ כיסוי עננים", colorFn: W.colorFor("cloud"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
-      humidity: { title: "💧 לחות יחסית", colorFn: W.colorFor("humidity"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
-      pressure: { title: "🎈 לחץ ברומטרי", colorFn: W.colorFor("pressure"), min: 970, max: 1045, unit: "hPa", fmt: (v) => Math.round(v) },
-      waves:    { title: "🌊 גובה גלים", colorFn: W.colorFor("waves"), min: 0, max: 6, unit: "מ'", fmt: (v) => v.toFixed(1) },
-      aqi:      { title: "😷 איכות אוויר", colorFn: W.colorFor("aqi"), min: 0, max: 120, unit: "EAQI", fmt: (v) => Math.round(v) },
-      storms:   { title: "⛈️ פוטנציאל סופות", colorFn: W.colorFor("cape"), min: 0, max: 3000, unit: "J/kg", fmt: (v) => Math.round(v) },
+      wind:     { title: `${W.t("legend.wind")}${lvl}`, colorFn: W.colorFor("wind"), min: 0, max: 35, unit: W.units.windUnit(), fmt: windFmt },
+      gusts:    { title: W.t("legend.gusts"), colorFn: W.colorFor("wind"), min: 0, max: 40, unit: W.units.windUnit(), fmt: windFmt },
+      temp:     { title: `${W.t("legend.temp")}${lvl}`, colorFn: W.colorFor("temp"), min: -20, max: 45, unit: W.units.tempUnit(), fmt: tempFmt },
+      clouds:   { title: W.t("legend.clouds"), colorFn: W.colorFor("cloud"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
+      humidity: { title: W.t("legend.humidity"), colorFn: W.colorFor("humidity"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
+      pressure: { title: W.t("legend.pressure"), colorFn: W.colorFor("pressure"), min: 970, max: 1045, unit: "hPa", fmt: (v) => Math.round(v) },
+      waves:    { title: W.t("legend.waves"), colorFn: W.colorFor("waves"), min: 0, max: 6, unit: W.i18n.lang === "en" ? "m" : "מ'", fmt: (v) => v.toFixed(1) },
+      aqi:      { title: W.t("legend.aqi"), colorFn: W.colorFor("aqi"), min: 0, max: 120, unit: "EAQI", fmt: (v) => Math.round(v) },
+      storms:   { title: W.t("legend.storms"), colorFn: W.colorFor("cape"), min: 0, max: 3000, unit: "J/kg", fmt: (v) => Math.round(v) },
     };
     const spec = specs[state.layer];
     if (spec) W.ui.setScaleLegend(spec);
@@ -218,8 +218,10 @@
   }
 
   // ---- Build control bars + wiring -----------------------------------
-  W.ui.buildLayers(W.overlays, state.layer, (key) => { state.layer = key; buildLayer(); scheduleHash(); });
-  W.ui.buildLevels(W.levels, state.level, (id) => { state.level = id; buildLayer(); scheduleHash(); });
+  const onLayerPick = (key) => { state.layer = key; buildLayer(); scheduleHash(); };
+  const onLevelPick = (id) => { state.level = id; buildLayer(); scheduleHash(); };
+  W.ui.buildLayers(W.overlays, state.layer, onLayerPick);
+  W.ui.buildLevels(W.levels, state.level, onLevelPick);
   W.ui.initSlider({
     onScrub: (i) => { renderAt(i); scheduleHash(); },
     onPlayToggle: () => (state.playTimer ? stopPlay() : startPlay()),
@@ -227,11 +229,15 @@
 
   // Model selector
   const modelSel = document.getElementById("model-select");
-  W.models.forEach((m) => {
-    const o = document.createElement("option");
-    o.value = m.id; o.textContent = m.label; modelSel.appendChild(o);
-  });
-  modelSel.value = state.model;
+  function populateModels() {
+    modelSel.innerHTML = "";
+    W.models.forEach((m) => {
+      const o = document.createElement("option");
+      o.value = m.id; o.textContent = W.t("model." + m.id); modelSel.appendChild(o);
+    });
+    modelSel.value = state.model;
+  }
+  populateModels();
   modelSel.addEventListener("change", () => {
     state.model = modelSel.value;
     buildLayer(); scheduleHash();
@@ -400,6 +406,42 @@
     e.stopPropagation(); closeTools(); syncSegs(); setPop.classList.remove("hidden");
   });
 
+  // Language (i18n)
+  const setToolText = (id, key, hasDesc) => {
+    const el = document.getElementById(id);
+    el.querySelector("b").textContent = W.t(key);
+    if (hasDesc !== false) { const s = el.querySelector("small"); if (s) s.textContent = W.t(key + ".d"); }
+  };
+  function applyLang() {
+    const l = W.i18n.lang;
+    document.documentElement.setAttribute("dir", l === "en" ? "ltr" : "rtl");
+    document.documentElement.setAttribute("lang", l);
+    document.getElementById("search-input").placeholder = W.t("search");
+    document.getElementById("locate-btn").title = W.t("locate");
+    document.querySelector("#tools-popover .fav-title").textContent = W.t("tools.title");
+    setToolText("tool-route", "tool.route");
+    setToolText("tool-fav", "tool.fav");
+    setToolText("tool-xh", "tool.xh", false);
+    setToolText("tool-alerts", "tool.alerts");
+    setToolText("tool-share", "tool.share");
+    setToolText("tool-settings", "tool.settings");
+    document.querySelector("#tool-lang b").textContent = W.t("tool.lang");
+    document.querySelector("#tool-lang small").textContent = l === "en" ? "החלף שפה" : "Switch language";
+    W.ui.buildLayers(W.overlays, state.layer, onLayerPick);
+    W.ui.buildLevels(W.levels, state.level, onLevelPick);
+    W.ui.setActiveLayer(state.layer); W.ui.setActiveLevel(state.level);
+    W.ui.setLevelsEnabled(!!W.overlays[state.layer].altAware);
+    populateModels();
+    applyXh();
+    const k = W.overlays[state.layer].kind;
+    if (k === "wind" || k === "scalar") setLegendFor();
+  }
+  document.getElementById("tool-lang").addEventListener("click", (e) => {
+    e.stopPropagation(); closeTools();
+    W.i18n.set(W.i18n.lang === "en" ? "he" : "en");
+    applyLang();
+  });
+
   // ---- Settings (units) ----------------------------------------------
   const setPop = document.getElementById("settings-popover");
   function syncSegs() {
@@ -482,7 +524,7 @@
   const applyXh = () => {
     document.getElementById("crosshair").classList.toggle("hidden", !xhOn);
     document.getElementById("tool-xh").classList.toggle("active", xhOn);
-    document.querySelector(".tool-xh-state").textContent = xhOn ? "מוצגת — לחץ לכיבוי" : "מוסתרת — לחץ להצגה";
+    document.querySelector(".tool-xh-state").textContent = xhOn ? W.t("tool.xh.on") : W.t("tool.xh.off");
   };
   applyXh();
   document.getElementById("tool-xh").addEventListener("click", () => {
@@ -620,6 +662,46 @@
     }
   });
 
+  // Spot alerts via browser notifications (checked on open — no server push)
+  const alertsOn = () => { try { return localStorage.getItem("ow_alerts") === "1"; } catch (e) { return false; } };
+  async function checkSpotAlerts() {
+    if (!alertsOn() || !("Notification" in window) || Notification.permission !== "granted") return;
+    for (const f of W.favorites.all().filter((x) => x.sport)) {
+      try {
+        const hours = await W.api.spotForecast(f.lat, f.lon, W.sportsNeedingWaves.includes(f.sport));
+        const w = W.spots.findWindows(f.sport, hours).find((x) => {
+          const dt = x.startTime.getTime() - Date.now();
+          return dt > 0 && dt < 48 * 3600 * 1000;
+        });
+        if (w) {
+          const s = W.SPORTS[f.sport];
+          new Notification(`${s.icon} תנאים טובים ל${s.label}`, {
+            body: `${f.name} — ${w.startTime.toLocaleString("he-IL", { weekday: "short", hour: "2-digit", minute: "2-digit" })}`,
+            icon: "icon.svg",
+          });
+        }
+      } catch (e) { /* skip */ }
+    }
+  }
+  const toolAlerts = document.getElementById("tool-alerts");
+  toolAlerts.classList.toggle("active", alertsOn());
+  toolAlerts.addEventListener("click", async (e) => {
+    e.stopPropagation(); closeTools();
+    if (!("Notification" in window)) { showToast("התראות לא נתמכות בדפדפן"); return; }
+    if (alertsOn()) {
+      try { localStorage.setItem("ow_alerts", "0"); } catch (e2) {}
+      toolAlerts.classList.remove("active"); showToast("התראות ספוטים כבויות");
+      return;
+    }
+    let perm = Notification.permission;
+    if (perm === "default") perm = await Notification.requestPermission();
+    if (perm !== "granted") { showToast("יש לאשר התראות בדפדפן"); return; }
+    try { localStorage.setItem("ow_alerts", "1"); } catch (e2) {}
+    toolAlerts.classList.add("active");
+    if (!W.favorites.all().some((f) => f.sport)) showToast("🔔 הופעל! שמור ספוט ובחר ספורט לקבלת התראות");
+    else { showToast("🔔 התראות ספוטים הופעלו"); checkSpotAlerts(); }
+  });
+
   // My location
   const locateBtn = document.getElementById("locate-btn");
   locateBtn.addEventListener("click", () => {
@@ -635,6 +717,7 @@
   });
 
   // ---- Boot ----------------------------------------------------------
+  applyLang();
   const initial = parseHash();
   if (initial) {
     applyingHash = true;
@@ -654,4 +737,5 @@
         () => {}, { timeout: 4000 });
     }
   }
+  if (alertsOn()) setTimeout(checkSpotAlerts, 3000);
 })(window.W);

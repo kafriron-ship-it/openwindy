@@ -17,7 +17,7 @@
       Object.entries(overlays).forEach(([key, o]) => {
         const b = document.createElement("button");
         b.className = "layer-btn" + (key === active ? " active" : "");
-        b.textContent = o.label; b.dataset.layer = key;
+        b.textContent = W.t("layer." + key); b.dataset.layer = key;
         b.onclick = () => onPick(key);
         bar.appendChild(b);
       });
@@ -29,11 +29,12 @@
 
     buildLevels(levels, active, onPick) {
       const bar = $("levels");
-      bar.innerHTML = `<div class="levels-title">גובה</div>`;
+      bar.innerHTML = `<div class="levels-title">${W.t("levels.title")}</div>`;
       levels.forEach((l) => {
         const b = document.createElement("button");
         b.className = "level-btn" + (l.id === active ? " active" : "");
-        b.innerHTML = `<span class="lv-h">${l.label}</span><span class="lv-s">${l.sub}</span>`;
+        const sub = W.t("lvl." + l.id + ".sub");
+        b.innerHTML = `<span class="lv-h">${W.t("lvl." + l.id)}</span><span class="lv-s">${sub === "lvl." + l.id + ".sub" ? l.sub : sub}</span>`;
         b.dataset.level = l.id;
         b.onclick = () => onPick(l.id);
         bar.appendChild(b);
