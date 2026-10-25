@@ -291,28 +291,65 @@
   });
 
   const favPop = document.getElementById("fav-popover");
+  function sportOptions(sel) {
+    return `<option value="">— בחר ספורט —</option>` +
+      Object.entries(W.SPORTS).map(([k, s]) =>
+        `<option value="${k}" ${k === sel ? "selected" : ""}>${s.icon} ${s.label}</option>`).join("");
+  }
   function renderFavPopover() {
     const favs = W.favorites.all();
-    favPop.innerHTML = `<div class="fav-title">מיקומים שמורים</div>` +
-      (favs.length ? favs.map((f, i) =>
-        `<div class="fav-item" data-i="${i}"><span>📍 ${f.name}</span>
-         <button class="del" data-i="${i}" title="מחק">×</button></div>`).join("")
-        : `<div class="fav-empty">אין עדיין מיקומים שמורים. פתח תחזית ולחץ "שמור".</div>`);
-    favPop.querySelectorAll(".fav-item").forEach((el) =>
+    favPop.innerHTML = `<div class="fav-title">ספוטים שמורים</div>` +
+      (favs.length ? favs.map((f, i) => `
+        <div class="fav-item">
+          <div class="fav-row-main" data-open="${i}"><span>📍 ${f.name}</span>
+            <button class="del" data-del="${i}" title="מחק">×</button></div>
+          <div class="fav-sport">
+            <select data-sport="${i}">${sportOptions(f.sport)}</select>
+            <button class="go" data-report="${i}" ${f.sport ? "" : "disabled"}>תנאים 📊</button>
+          </div>
+        </div>`).join("")
+        : `<div class="fav-empty">אין עדיין ספוטים. פתח תחזית ולחץ "שמור", ואז בחר ספורט.</div>`);
+
+    favPop.querySelectorAll("[data-open]").forEach((el) =>
       el.addEventListener("click", (e) => {
         if (e.target.classList.contains("del")) return;
-        const f = W.favorites.all()[+el.dataset.i];
+        const f = W.favorites.all()[+el.dataset.open];
         favPop.classList.add("hidden");
         map.setView([f.lat, f.lon], 8);
         showForecast(f.lat, f.lon, f.name);
       }));
-    favPop.querySelectorAll(".del").forEach((el) =>
+    favPop.querySelectorAll("[data-del]").forEach((el) =>
       el.addEventListener("click", (e) => {
         e.stopPropagation();
-        const f = W.favorites.all()[+el.dataset.i];
+        const f = W.favorites.all()[+el.dataset.del];
         W.favorites.remove(f.lat, f.lon);
         renderFavPopover(); updateFavButton();
       }));
+    favPop.querySelectorAll("[data-sport]").forEach((el) =>
+      el.addEventListener("change", () => {
+        const f = W.favorites.all()[+el.dataset.sport];
+        W.favorites.setSport(f.lat, f.lon, el.value);
+        renderFavPopover();
+      }));
+    favPop.querySelectorAll("[data-report]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const f = W.favorites.all()[+el.dataset.report];
+        favPop.classList.add("hidden");
+        showSpotReport(f);
+      }));
+  }
+
+  async function showSpotReport(f) {
+    if (!f.sport) return;
+    W.ui.loading(true);
+    try {
+      const needWaves = W.sportsNeedingWaves.includes(f.sport);
+      const hours = await W.api.spotForecast(f.lat, f.lon, needWaves);
+      const windows = W.spots.findWindows(f.sport, hours);
+      W.ui.renderSpotReport(f.name, f.sport, windows, () => W.ui.closePanel());
+    } catch (e) {
+      alert(e.code === 429 ? "חרגת ממכסת Open-Meteo — נסה בעוד כמה דקות" : "שגיאה: " + e.message);
+    } finally { W.ui.loading(false); }
   }
   document.getElementById("fav-btn").addEventListener("click", () => {
     document.getElementById("settings-popover").classList.add("hidden");

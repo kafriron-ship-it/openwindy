@@ -77,6 +77,7 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Ro
 }
 #settings-popover { left: 20px; }
 #fav-popover { left: 20px; max-height: 60vh; overflow-y: auto; }
+#settings-popover.hidden, #fav-popover.hidden { display: none; }
 .set-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 6px 0; font-size: 13px; }
 .seg { display: flex; gap: 3px; background: var(--panel-2); border-radius: 8px; padding: 3px; }
 .seg button {
@@ -109,6 +110,23 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Ro
 .fav-item .del { color: var(--muted); border: none; background: none; cursor: pointer; font-size: 16px; }
 .fav-item .del:hover { color: #f46d43; }
 .fav-empty { color: var(--muted); font-size: 13px; padding: 6px; }
+
+/* Spot conditions */
+.fav-item .fav-sport { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+.fav-sport select { background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 7px; padding: 4px 6px; font-size: 12px; }
+.fav-sport .go { background: var(--accent); color: #fff; border: none; border-radius: 7px;
+  padding: 4px 10px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.fav-sport .go:disabled { opacity: .4; cursor: default; }
+.fav-row-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fav-item { display: block; }
+
+.sp-day { font-size: 12px; font-weight: 700; color: var(--accent); margin: 12px 0 6px; }
+.sp-win { display: flex; align-items: center; gap: 8px; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 5px; font-size: 13px; }
+.sp-dot { font-size: 11px; }
+.sp-time { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 92px; direction: ltr; text-align: right; }
+.sp-cond { color: var(--muted); font-size: 12px; direction: ltr; text-align: right; unicode-bidi: plaintext; }
 
 .panel-fav { position: absolute; top: 10px; left: 50px; z-index: 2;
   background: var(--panel-2); border: 1px solid var(--border); color: var(--text);

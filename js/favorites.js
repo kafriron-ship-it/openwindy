@@ -11,10 +11,14 @@
     has(lat, lon) { return list.some((f) => same(f, lat, lon)); },
     add(name, lat, lon) {
       if (this.has(lat, lon)) return;
-      list.push({ name: name || `${lat.toFixed(2)}, ${lon.toFixed(2)}`, lat, lon });
+      list.push({ name: name || `${lat.toFixed(2)}, ${lon.toFixed(2)}`, lat, lon, sport: "" });
       save();
     },
     remove(lat, lon) { list = list.filter((f) => !same(f, lat, lon)); save(); },
+    setSport(lat, lon, sport) {
+      const f = list.find((x) => same(x, lat, lon));
+      if (f) { f.sport = sport; save(); }
+    },
     toggle(name, lat, lon) {
       if (this.has(lat, lon)) { this.remove(lat, lon); return false; }
       this.add(name, lat, lon); return true;

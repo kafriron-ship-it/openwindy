@@ -292,6 +292,50 @@
       this.openPanel();
     },
 
+    // Spot conditions report: good windows for a sport over the next 7 days.
+    renderSpotReport(name, sport, windows, onBack) {
+      const s = W.SPORTS[sport];
+      const dayNames = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+      const dLabel = (d) => {
+        const today = new Date(), tom = new Date(Date.now() + 86400000);
+        if (d.toDateString() === today.toDateString()) return "היום";
+        if (d.toDateString() === tom.toDateString()) return "מחר";
+        return `יום ${dayNames[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}`;
+      };
+      let body;
+      if (!windows.length) {
+        body = `<div class="fav-empty">אין תנאים טובים ל${s.label} ב-7 הימים הקרובים 😕<br>נסה ספוט אחר או ספורט אחר.</div>`;
+      } else {
+        // group by day
+        const byDay = {};
+        windows.forEach((w) => { (byDay[dLabel(w.startTime)] = byDay[dLabel(w.startTime)] || []).push(w); });
+        body = Object.entries(byDay).map(([day, ws]) => `
+          <div class="sp-day">${day}</div>
+          ${ws.map((w) => {
+            const dot = w.peak === 2 ? "🟢" : "🟡";
+            const wind = `${Math.round(W.units.windVal(w.windMinMs))}–${Math.round(W.units.windVal(w.windMaxMs))} ${W.units.windUnit()}`;
+            const wave = w.waveMax != null ? ` · גל עד ${w.waveMax.toFixed(1)}מ'` : "";
+            return `<div class="sp-win"><span class="sp-dot">${dot}</span>
+              <span class="sp-time">${hhmm(w.startTime)}–${hhmm(w.endTime)}</span>
+              <span class="sp-cond">💨 ${wind}${wave}</span></div>`;
+          }).join("")}`).join("");
+      }
+      const next = windows[0];
+      const nextLine = next
+        ? `החלון הבא: <b>${dLabel(next.startTime)} ${hhmm(next.startTime)}</b>`
+        : "אין חלון קרוב";
+
+      $("panel-content").innerHTML = `
+        <button id="sp-back" class="rt-clear" style="margin:0 0 12px">← חזרה</button>
+        <h2 class="loc-name">${s.icon} ${name}</h2>
+        <div class="loc-sub">${s.label} · ${nextLine}</div>
+        <div class="rt-totals">🟢 תנאים מעולים · 🟡 תנאים טובים — בשעות היום (06:00–20:00)</div>
+        ${body}
+        <div class="loc-sub" style="margin-top:14px">נתונים: Open-Meteo · ספים לפי סטנדרט ${s.label}</div>`;
+      $("sp-back").addEventListener("click", onBack);
+      this.openPanel();
+    },
+
     // Route planner panel
     renderRoute(route, handlers) {
       const presets = [

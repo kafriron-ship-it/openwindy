@@ -124,6 +124,36 @@
       return data.hourly || {};
     },
 
+    // Spot forecast for the condition engine: hourly wind + precip (+ waves).
+    async spotForecast(lat, lon, needWaves) {
+      const p = new URLSearchParams({
+        latitude: lat.toFixed(4), longitude: lon.toFixed(4), timezone: "auto",
+        hourly: "wind_speed_10m,wind_gusts_10m,precipitation", wind_speed_unit: "ms",
+        forecast_days: "7",
+      });
+      const fc = await getJSON(`${forecastEP()}?${p}`);
+      const h = fc.hourly || {};
+      const hours = (h.time || []).map((t, i) => ({
+        time: t, windMs: h.wind_speed_10m ? h.wind_speed_10m[i] : 0,
+        gustMs: h.wind_gusts_10m ? h.wind_gusts_10m[i] : 0,
+        precip: h.precipitation ? h.precipitation[i] : 0, waveM: null,
+      }));
+      if (needWaves) {
+        try {
+          const mp = new URLSearchParams({
+            latitude: lat.toFixed(4), longitude: lon.toFixed(4), timezone: "auto",
+            hourly: "wave_height", forecast_days: "7",
+          });
+          const mar = await getJSON(`${C.marineUrl}?${mp}`);
+          const mh = mar.hourly || {};
+          const map = {};
+          (mh.time || []).forEach((t, i) => { map[t] = mh.wave_height[i]; });
+          hours.forEach((hr) => { if (map[hr.time] != null) hr.waveM = map[hr.time]; });
+        } catch (e) { /* no marine data here (inland) */ }
+      }
+      return hours;
+    },
+
     // Windy Webcams API v3 — needs the user's own free key (x-windy-api-key).
     async webcams(bounds, key) {
       const c = bounds.getCenter();
