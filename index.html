@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenWindy — מזג אוויר חינמי</title>
+
+  <!-- Leaflet (open source) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- leaflet-velocity (open source) wind animation -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.0/dist/leaflet-velocity.min.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- Top bar -->
+  <header id="topbar">
+    <div class="brand">Open<span>Windy</span></div>
+    <select id="model-select" title="מודל תחזית"></select>
+    <button id="route-btn" title="תכנון מסלול">🧭</button>
+    <button id="fav-btn" title="מועדפים">☆</button>
+    <button id="settings-btn" title="הגדרות">⚙</button>
+    <form id="search-form" autocomplete="off">
+      <input id="search-input" type="text" placeholder="חפש עיר או מקום…" />
+      <div id="search-results"></div>
+    </form>
+  </header>
+
+  <!-- Layer switcher (populated from W.overlays) -->
+  <nav id="layers"></nav>
+
+  <!-- Altitude selector -->
+  <nav id="levels"></nav>
+
+  <!-- Time slider -->
+  <div id="timebar">
+    <button id="play-btn" aria-label="נגן">▶</button>
+    <div id="time-label">—</div>
+    <input id="time-slider" type="range" min="0" max="0" value="0" step="1" />
+  </div>
+
+  <!-- Forecast side panel -->
+  <aside id="panel" class="hidden">
+    <button id="panel-close" aria-label="סגור">×</button>
+    <button id="panel-fav" class="panel-fav hidden">☆ שמור</button>
+    <div id="panel-content"></div>
+  </aside>
+
+  <!-- Settings popover -->
+  <div id="settings-popover" class="hidden">
+    <div class="set-group"><span>טמפרטורה</span>
+      <div class="seg" id="seg-temp"><button data-v="c">°C</button><button data-v="f">°F</button></div></div>
+    <div class="set-group"><span>רוח</span>
+      <div class="seg" id="seg-wind"><button data-v="ms">m/s</button><button data-v="kmh">קמ"ש</button><button data-v="kt">קשר</button></div></div>
+  </div>
+
+  <!-- Favorites popover -->
+  <div id="fav-popover" class="hidden"></div>
+
+  <div id="loader" class="hidden"><div class="spinner"></div></div>
+  <div id="legend"></div>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-velocity@2.1.0/dist/leaflet-velocity.min.js"></script>
+
+  <!-- App -->
+  <script src="js/config.js"></script>
+  <script src="js/units.js"></script>
+  <script src="js/favorites.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/field.js"></script>
+  <script src="js/wind.js"></script>
+  <script src="js/overlays.js"></script>
+  <script src="js/route.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
