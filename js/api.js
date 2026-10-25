@@ -45,7 +45,7 @@
           "precipitation","wind_speed_10m","wind_direction_10m","cloud_cover"].join(","),
         daily: ["weather_code","temperature_2m_max","temperature_2m_min",
           "precipitation_probability_max","wind_speed_10m_max","sunrise","sunset"].join(","),
-        forecast_days: "7",
+        forecast_days: "16",
       });
       if (model && model !== "best_match") params.set("models", model);
       return getJSON(`${forecastEP()}?${params}`);
@@ -62,19 +62,29 @@
     // Returns aligned times (GMT) + per-point series. opts.marine uses marine API.
     async hourlyGrid(bounds, n, variables, opts = {}) {
       const g = buildGrid(bounds, n);
+      const days = opts.airquality ? 5 : opts.marine ? 10 : C.forecastDays;
       const base = { latitude: g.lats.join(","), longitude: g.lons.join(","),
-        hourly: variables.join(","), timezone: "GMT",
-        forecast_days: String(C.forecastDays) };
+        hourly: variables.join(","), timezone: "GMT", forecast_days: String(days) };
       let endpoint = forecastEP();
+      let usedCoarse = false;
       if (opts.marine) endpoint = C.marineUrl;
       else if (opts.airquality) endpoint = C.airQualityUrl;
       else {
         base.wind_speed_unit = C.units.windSpeed;
         base.temperature_unit = C.units.temperature;
         if (opts.model && opts.model !== "best_match") base.models = opts.model;
+        if (C.gridResolution) { base.temporal_resolution = C.gridResolution; usedCoarse = true; }
       }
-      const url = endpoint + "?" + new URLSearchParams(base);
-      const data = await getJSON(url);
+      let data;
+      try {
+        data = await getJSON(`${endpoint}?${new URLSearchParams(base)}`);
+      } catch (e) {
+        if (usedCoarse && e.code !== 429) {
+          // temporal_resolution unsupported? degrade to 7 days hourly.
+          delete base.temporal_resolution; base.forecast_days = "7";
+          data = await getJSON(`${endpoint}?${new URLSearchParams(base)}`);
+        } else throw e;
+      }
       const arr = Array.isArray(data) ? data : [data];
       const times = (arr[0] && arr[0].hourly && arr[0].hourly.time) || [];
       const series = arr.map((r) => {

@@ -13,8 +13,9 @@ W.config = {
   startZoom: 6,
 
   windGrid: 11,       // grid points per axis for field sampling
-  forecastDays: 4,    // how far the time slider reaches
-  sliderStepHours: 3, // slider granularity
+  forecastDays: 16,   // how far the time slider reaches (max for Open-Meteo)
+  gridResolution: "hourly_3", // 3-hourly grid frames keep 16 days light
+  sliderStep: 1,      // advance one frame (= 3h) per slider tick
 
   units: { temperature: "celsius", windSpeed: "ms" },
 };

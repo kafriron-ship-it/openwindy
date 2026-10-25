@@ -27,10 +27,7 @@
   <header id="topbar">
     <div class="brand">Open<span>Windy</span></div>
     <select id="model-select" title="מודל תחזית"></select>
-    <button id="xh-toggle" title="כוונת מרכז" class="active">⌖</button>
-    <button id="route-btn" title="תכנון מסלול">🧭</button>
-    <button id="fav-btn" title="מועדפים">☆</button>
-    <button id="settings-btn" title="הגדרות">⚙</button>
+    <button id="tools-btn" title="כלים">🧰</button>
     <form id="search-form" autocomplete="off">
       <input id="search-input" type="text" placeholder="חפש עיר או מקום…" />
       <div id="search-results"></div>
@@ -65,6 +62,7 @@
 
   <!-- Forecast side panel -->
   <aside id="panel" class="hidden">
+    <div id="panel-handle" title="גרור להגדלה/הקטנה"></div>
     <button id="panel-close" aria-label="סגור">×</button>
     <button id="panel-fav" class="panel-fav hidden">☆ שמור</button>
     <div id="panel-content"></div>
@@ -92,6 +90,15 @@
 
   <!-- Favorites popover -->
   <div id="fav-popover" class="hidden"></div>
+
+  <!-- Tools menu -->
+  <div id="tools-popover" class="hidden">
+    <div class="fav-title">כלים</div>
+    <button class="tool-item" id="tool-route"><span class="ti-ic">🧭</span><span class="ti-txt"><b>תכנון מסלול</b><small>תחזית בכל נקודה לאורך הדרך</small></span></button>
+    <button class="tool-item" id="tool-fav"><span class="ti-ic">⭐</span><span class="ti-txt"><b>ספוטים והתראות</b><small>שמור ספוט + ספורט לקבלת חלונות טובים</small></span></button>
+    <button class="tool-item" id="tool-xh"><span class="ti-ic">🎯</span><span class="ti-txt"><b>כוונת מרכז</b><small class="tool-xh-state"></small></span></button>
+    <button class="tool-item" id="tool-settings"><span class="ti-ic">⚙</span><span class="ti-txt"><b>הגדרות</b><small>יחידות, מצלמות, שרת עצמאי</small></span></button>
+  </div>
 
   <!-- First-run hint -->
   <div id="hint" class="hidden">

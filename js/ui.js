@@ -89,9 +89,8 @@
     setTimes(times) {
       this._times = times;
       const s = $("time-slider");
-      const step = W.config.sliderStepHours;
       s.max = String(Math.max(0, times.length - 1));
-      s.step = String(step);
+      s.step = String(W.config.sliderStep || 1);
       if (+s.value > +s.max) s.value = "0";
       this._updateLabel(+s.value);
     },

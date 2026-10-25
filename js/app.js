@@ -178,7 +178,7 @@
   function startPlay() {
     if (state.playTimer) return;
     W.ui.setPlaying(true);
-    const max = W.Field.times.length - 1, step = C.sliderStepHours;
+    const max = W.Field.times.length - 1, step = C.sliderStep || 1;
     state.playTimer = setInterval(() => {
       let i = W.ui.getTimeIndex() + step;
       if (i > max) i = 0;
@@ -357,10 +357,21 @@
       alert(e.code === 429 ? "חרגת ממכסת Open-Meteo — נסה בעוד כמה דקות" : "שגיאה: " + e.message);
     } finally { W.ui.loading(false); }
   }
-  document.getElementById("fav-btn").addEventListener("click", () => {
-    document.getElementById("settings-popover").classList.add("hidden");
-    favPop.classList.toggle("hidden");
-    if (!favPop.classList.contains("hidden")) renderFavPopover();
+  // Tools menu
+  const toolsPop = document.getElementById("tools-popover");
+  const toolsBtn = document.getElementById("tools-btn");
+  const closeTools = () => toolsPop.classList.add("hidden");
+  toolsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setPop.classList.add("hidden"); favPop.classList.add("hidden");
+    toolsPop.classList.toggle("hidden");
+  });
+  document.getElementById("tool-route").addEventListener("click", (e) => { e.stopPropagation(); closeTools(); toggleRoute(); });
+  document.getElementById("tool-fav").addEventListener("click", (e) => {
+    e.stopPropagation(); closeTools(); renderFavPopover(); favPop.classList.remove("hidden");
+  });
+  document.getElementById("tool-settings").addEventListener("click", (e) => {
+    e.stopPropagation(); closeTools(); syncSegs(); setPop.classList.remove("hidden");
   });
 
   // ---- Settings (units) ----------------------------------------------
@@ -371,11 +382,6 @@
     document.querySelectorAll("#seg-wind button").forEach((b) =>
       b.classList.toggle("active", b.dataset.v === W.units.wind));
   }
-  document.getElementById("settings-btn").addEventListener("click", () => {
-    favPop.classList.add("hidden");
-    setPop.classList.toggle("hidden");
-    syncSegs();
-  });
   document.querySelectorAll("#seg-temp button").forEach((b) =>
     b.addEventListener("click", () => { W.units.set({ temp: b.dataset.v }); onUnitsChange(); }));
   document.querySelectorAll("#seg-wind button").forEach((b) =>
@@ -387,8 +393,9 @@
     if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, state.lastPoint.label); updateFavButton(); }
   }
   document.addEventListener("click", (e) => {
-    if (!e.target.closest("#settings-popover") && e.target.id !== "settings-btn") setPop.classList.add("hidden");
-    if (!e.target.closest("#fav-popover") && e.target.id !== "fav-btn") favPop.classList.add("hidden");
+    if (!e.target.closest("#settings-popover")) setPop.classList.add("hidden");
+    if (!e.target.closest("#fav-popover")) favPop.classList.add("hidden");
+    if (!e.target.closest("#tools-popover") && e.target.id !== "tools-btn") toolsPop.classList.add("hidden");
   });
   map.on("click", (e) => {
     if (W.route.mode) { addWaypoint(e.latlng.lat, e.latlng.lng); return; }
@@ -432,21 +439,47 @@
   });
   map.on("move", updateCrosshair);
 
-  // Crosshair on/off toggle (persisted)
-  const xhToggle = document.getElementById("xh-toggle");
+  // Crosshair on/off toggle (persisted), driven from the Tools menu
   let xhOn = true;
   try { xhOn = localStorage.getItem("ow_crosshair") !== "0"; } catch (e) {}
   const applyXh = () => {
     document.getElementById("crosshair").classList.toggle("hidden", !xhOn);
-    xhToggle.classList.toggle("active", xhOn);
+    document.getElementById("tool-xh").classList.toggle("active", xhOn);
+    document.querySelector(".tool-xh-state").textContent = xhOn ? "מוצגת — לחץ לכיבוי" : "מוסתרת — לחץ להצגה";
   };
   applyXh();
-  xhToggle.addEventListener("click", () => {
+  document.getElementById("tool-xh").addEventListener("click", () => {
     xhOn = !xhOn;
     try { localStorage.setItem("ow_crosshair", xhOn ? "1" : "0"); } catch (e) {}
     applyXh();
   });
   document.getElementById("panel-close").addEventListener("click", () => W.ui.closePanel());
+
+  // Bottom-sheet drag-to-resize (touch + mouse)
+  (function () {
+    const panel = document.getElementById("panel");
+    const handle = document.getElementById("panel-handle");
+    let startY = 0, startH = 0, dragging = false;
+    handle.addEventListener("pointerdown", (e) => {
+      dragging = true; startY = e.clientY;
+      startH = panel.getBoundingClientRect().height;
+      panel.classList.add("dragging"); handle.setPointerCapture(e.pointerId);
+    });
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) return;
+      let h = startH + (startY - e.clientY);
+      h = Math.max(70, Math.min(window.innerHeight * 0.92, h));
+      panel.style.height = h + "px";
+    });
+    const end = () => {
+      if (!dragging) return; dragging = false; panel.classList.remove("dragging");
+      if (panel.getBoundingClientRect().height < window.innerHeight * 0.2) {
+        W.ui.closePanel(); panel.style.height = "";
+      }
+    };
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  })();
 
   // ---- Route planner -------------------------------------------------
   W.route.init(map);
@@ -466,14 +499,14 @@
       if (e.code === 429) alert("חרגת ממכסת Open-Meteo — נסה בעוד כמה דקות");
     } finally { W.ui.loading(false); }
   }
-  const routeBtn = document.getElementById("route-btn");
-  routeBtn.addEventListener("click", () => {
+  function toggleRoute() {
     W.route.mode = !W.route.mode;
-    routeBtn.classList.toggle("active", W.route.mode);
+    document.getElementById("tool-route").classList.toggle("active", W.route.mode);
+    document.getElementById("tools-btn").classList.toggle("active", W.route.mode);
     map.getContainer().style.cursor = W.route.mode ? "crosshair" : "";
     if (W.route.mode) { W.route.startMs = Date.now(); W.ui.renderRoute(W.route, routeHandlers); }
     else W.ui.closePanel();
-  });
+  }
 
   // ---- Search --------------------------------------------------------
   const input = document.getElementById("search-input");
