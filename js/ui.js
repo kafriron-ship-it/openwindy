@@ -29,11 +29,12 @@
 
     buildLevels(levels, active, onPick) {
       const bar = $("levels");
-      bar.innerHTML = "";
+      bar.innerHTML = `<div class="levels-title">גובה</div>`;
       levels.forEach((l) => {
         const b = document.createElement("button");
         b.className = "level-btn" + (l.id === active ? " active" : "");
-        b.textContent = l.label; b.dataset.level = l.id;
+        b.innerHTML = `<span class="lv-h">${l.label}</span><span class="lv-s">${l.sub}</span>`;
+        b.dataset.level = l.id;
         b.onclick = () => onPick(l.id);
         bar.appendChild(b);
       });
@@ -44,8 +45,35 @@
     },
     setLevelsEnabled(on) { $("levels").classList.toggle("disabled", !on); },
 
-    setLegend(text) { const l = $("legend"); l.textContent = text; l.classList.add("show"); },
+    setLegend(text) {
+      const l = $("legend");
+      l.classList.remove("scale");
+      l.innerHTML = `<div class="legend-title">${text}</div>`;
+      l.classList.add("show");
+    },
     clearLegend() { $("legend").classList.remove("show"); },
+
+    // Visual color-scale legend: gradient bar + value ticks.
+    // spec: { title, colorFn, min, max, unit, fmt(v) }
+    setScaleLegend(spec) {
+      const l = $("legend");
+      const steps = 14, stops = [];
+      for (let i = 0; i <= steps; i++) {
+        const v = spec.min + (i / steps) * (spec.max - spec.min);
+        const c = spec.colorFn(v);
+        const a = c.length > 3 ? c[3] / 255 : 1;
+        stops.push(`rgba(${c[0]},${c[1]},${c[2]},${a}) ${Math.round((i / steps) * 100)}%`);
+      }
+      const nTicks = 5, ticks = [];
+      for (let i = 0; i < nTicks; i++) {
+        const v = spec.min + (i / (nTicks - 1)) * (spec.max - spec.min);
+        ticks.push(spec.fmt(v));
+      }
+      l.innerHTML = `<div class="legend-title">${spec.title}${spec.unit ? ` <span class="legend-unit">(${spec.unit})</span>` : ""}</div>
+        <div class="legend-bar" style="background:linear-gradient(to right, ${stops.join(",")})"></div>
+        <div class="legend-ticks">${ticks.map((t) => `<span>${t}</span>`).join("")}</div>`;
+      l.classList.add("show", "scale");
+    },
 
     // ---- Time slider ---------------------------------------------------
     _times: [], _onScrub: null,

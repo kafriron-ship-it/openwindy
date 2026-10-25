@@ -31,14 +31,14 @@ W.models = [
   { id: "gem_global",   label: "GEM (קנדה)" },
 ];
 
-// Altitude levels. suffix = Open-Meteo variable suffix for wind/temp.
+// Altitude levels. label = friendly altitude; sub = technical (hPa) / purpose.
 W.levels = [
-  { id: "10m",    label: "קרקע",    windSuffix: "10m",    tempVar: "temperature_2m" },
-  { id: "850hPa", label: "850 hPa", windSuffix: "850hPa", tempVar: "temperature_850hPa" },
-  { id: "700hPa", label: "700 hPa", windSuffix: "700hPa", tempVar: "temperature_700hPa" },
-  { id: "500hPa", label: "500 hPa", windSuffix: "500hPa", tempVar: "temperature_500hPa" },
-  { id: "300hPa", label: "300 hPa", windSuffix: "300hPa", tempVar: "temperature_300hPa" },
-  { id: "250hPa", label: "250 hPa", windSuffix: "250hPa", tempVar: "temperature_250hPa" },
+  { id: "10m",    label: "קרקע",     sub: "פני הקרקע", windSuffix: "10m",    tempVar: "temperature_2m" },
+  { id: "850hPa", label: "1.5 ק\"מ", sub: "850 hPa",   windSuffix: "850hPa", tempVar: "temperature_850hPa" },
+  { id: "700hPa", label: "3 ק\"מ",   sub: "700 hPa",   windSuffix: "700hPa", tempVar: "temperature_700hPa" },
+  { id: "500hPa", label: "5.5 ק\"מ", sub: "500 hPa",   windSuffix: "500hPa", tempVar: "temperature_500hPa" },
+  { id: "300hPa", label: "9 ק\"מ",   sub: "זרם סילון", windSuffix: "300hPa", tempVar: "temperature_300hPa" },
+  { id: "250hPa", label: "10.5 ק\"מ",sub: "גובה טיסה", windSuffix: "250hPa", tempVar: "temperature_250hPa" },
 ];
 
 // Overlay registry. kind: wind | scalar | radar.

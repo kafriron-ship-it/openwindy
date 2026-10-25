@@ -132,7 +132,7 @@
       }
       state.scalar = new W.ScalarLayer({ colorFn: s.colorFn, opacity: s.opacity }).addTo(map);
       renderAt(W.ui.getTimeIndex());
-      setLegendFor(s);
+      setLegendFor();
     } catch (e) {
       console.error(e);
       W.ui.setLegend(e.code === 429
@@ -141,19 +141,23 @@
     } finally { W.ui.loading(false); }
   }
 
-  function setLegendFor(s) {
-    const L2 = state.level !== "10m" ? ` · ${state.level}` : "";
-    const map2 = {
-      wind: `💨 רוח (${W.units.windUnit()})${L2} — חלקיקים + צבע מהירות`,
-      gusts: `🌬️ משבי רוח (${W.units.windUnit()})`,
-      temp: `🌡️ טמפרטורה (${W.units.tempUnit()})${L2}`,
-      clouds: "☁️ כיסוי עננים (%)",
-      humidity: "💧 לחות יחסית (%)",
-      pressure: "🎈 לחץ ברומטרי (hPa)",
-      waves: "🌊 גובה גלים (מ') — מעל ים בלבד",
-      aqi: "😷 איכות אוויר (EAQI) — ירוק טוב · סגול מסוכן",
+  function setLegendFor() {
+    const lvl = state.level !== "10m"
+      ? ` · ${(W.levels.find((l) => l.id === state.level) || {}).label}` : "";
+    const windFmt = (v) => Math.round(W.units.windVal(v));
+    const tempFmt = (v) => Math.round(W.units.tempVal(v));
+    const specs = {
+      wind:     { title: `💨 מהירות רוח${lvl}`, colorFn: W.colorFor("wind"), min: 0, max: 35, unit: W.units.windUnit(), fmt: windFmt },
+      gusts:    { title: "🌬️ משבי רוח", colorFn: W.colorFor("wind"), min: 0, max: 40, unit: W.units.windUnit(), fmt: windFmt },
+      temp:     { title: `🌡️ טמפרטורה${lvl}`, colorFn: W.colorFor("temp"), min: -20, max: 45, unit: W.units.tempUnit(), fmt: tempFmt },
+      clouds:   { title: "☁️ כיסוי עננים", colorFn: W.colorFor("cloud"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
+      humidity: { title: "💧 לחות יחסית", colorFn: W.colorFor("humidity"), min: 0, max: 100, unit: "%", fmt: (v) => Math.round(v) },
+      pressure: { title: "🎈 לחץ ברומטרי", colorFn: W.colorFor("pressure"), min: 970, max: 1045, unit: "hPa", fmt: (v) => Math.round(v) },
+      waves:    { title: "🌊 גובה גלים", colorFn: W.colorFor("waves"), min: 0, max: 6, unit: "מ'", fmt: (v) => v.toFixed(1) },
+      aqi:      { title: "😷 איכות אוויר", colorFn: W.colorFor("aqi"), min: 0, max: 120, unit: "EAQI", fmt: (v) => Math.round(v) },
     };
-    W.ui.setLegend(map2[state.layer] || "");
+    const spec = specs[state.layer];
+    if (spec) W.ui.setScaleLegend(spec);
   }
 
   // ---- Render at a time index (no network) ---------------------------
@@ -377,7 +381,7 @@
   function onUnitsChange() {
     syncSegs();
     const o = W.overlays[state.layer];
-    if (o.kind === "wind" || o.kind === "scalar") setLegendFor(spec());
+    if (o.kind === "wind" || o.kind === "scalar") setLegendFor();
     if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, state.lastPoint.label); updateFavButton(); }
   }
   document.addEventListener("click", (e) => {
@@ -436,6 +440,17 @@
   });
   document.addEventListener("click", (e) => { if (!e.target.closest("#search-form")) W.ui.hideSearch(); });
   document.getElementById("search-form").addEventListener("submit", (e) => e.preventDefault());
+
+  // ---- First-run hint ------------------------------------------------
+  const hint = document.getElementById("hint");
+  const dismissHint = () => { hint.classList.add("hidden"); try { localStorage.setItem("ow_seen_hint", "1"); } catch (e) {} };
+  let seenHint = false;
+  try { seenHint = localStorage.getItem("ow_seen_hint") === "1"; } catch (e) {}
+  if (!seenHint) {
+    hint.classList.remove("hidden");
+    document.getElementById("hint-close").addEventListener("click", dismissHint);
+    setTimeout(dismissHint, 12000);
+  }
 
   // ---- Boot ----------------------------------------------------------
   buildLayer();
