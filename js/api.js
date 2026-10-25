@@ -164,6 +164,19 @@
       return hours;
     },
 
+    // Marine point forecast: wave height + tidal sea level (coastal only).
+    async marineForecast(lat, lon) {
+      const p = new URLSearchParams({
+        latitude: lat.toFixed(4), longitude: lon.toFixed(4), timezone: "auto",
+        hourly: "wave_height,sea_level_height_msl", forecast_days: "3",
+      });
+      const d = await getJSON(`${C.marineUrl}?${p}`);
+      const h = d.hourly || {};
+      const wave = h.wave_height || [], tide = h.sea_level_height_msl || [];
+      if (!wave.some((v) => v != null) && !tide.some((v) => v != null)) return null; // inland
+      return { times: h.time || [], wave, tide };
+    },
+
     // Windy Webcams API v3 — needs the user's own free key (x-windy-api-key).
     async webcams(bounds, key) {
       const c = bounds.getCenter();

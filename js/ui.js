@@ -6,6 +6,27 @@
 
   // GMT iso (no tz) -> local Date
   const toLocal = (iso) => new Date(iso.endsWith("Z") ? iso : iso + "Z");
+
+  // tide high/low events (local maxima/minima of sea level) from now forward
+  function tideEvents(times, tide) {
+    const now = Date.now(), ev = [];
+    for (let i = 1; i < tide.length - 1; i++) {
+      if (tide[i] == null || tide[i - 1] == null || tide[i + 1] == null) continue;
+      if (new Date(times[i]).getTime() < now) continue;
+      if (tide[i] > tide[i - 1] && tide[i] >= tide[i + 1]) ev.push({ type: "high", time: times[i] });
+      else if (tide[i] < tide[i - 1] && tide[i] <= tide[i + 1]) ev.push({ type: "low", time: times[i] });
+      if (ev.length >= 4) break;
+    }
+    return ev;
+  }
+  function nearestIdx(times) {
+    let b = 0, bd = Infinity;
+    for (let i = 0; i < times.length; i++) {
+      const d = Math.abs(new Date(times[i]).getTime() - Date.now());
+      if (d < bd) { bd = d; b = i; }
+    }
+    return b;
+  }
   const hhmm = (d) => d.getHours().toString().padStart(2,"0") + ":" +
                       d.getMinutes().toString().padStart(2,"0");
 
@@ -193,7 +214,7 @@
       </svg>`;
     },
 
-    renderForecast(data, label) {
+    renderForecast(data, label, marine) {
       const c = data.current;
       const [icon, desc] = W.describe(c.weather_code);
       const loc = label || `${data.latitude.toFixed(2)}, ${data.longitude.toFixed(2)}`;
@@ -226,6 +247,18 @@
           <div class="metric"><div class="k">לחות</div><div class="v">${c.relative_humidity_2m}%</div></div>
           <div class="metric"><div class="k">לחץ</div><div class="v">${W.units.presStr(c.surface_pressure)}</div></div>
           <div class="metric"><div class="k">משקעים</div><div class="v">${W.units.precipStr(c.precipitation)}</div></div></div>
+        ${(() => {
+          if (!marine) return "";
+          const mi = nearestIdx(marine.times);
+          const cw = marine.wave[mi], ct = marine.tide[mi];
+          const ev = tideEvents(marine.times, marine.tide);
+          return `<div class="section-title">🌊 ים וגאות</div>
+            <div class="metrics">
+              ${cw != null ? `<div class="metric"><div class="k">גובה גל</div><div class="v">${W.units.waveStr(cw)}</div></div>` : ""}
+              ${ct != null ? `<div class="metric"><div class="k">מפלס ים</div><div class="v">${ct.toFixed(2)} מ'</div></div>` : ""}
+            </div>
+            ${ev.length ? `<div class="daily">${ev.map((e) => `<div class="day"><span class="name">${e.type === "high" ? "🔼 גאות" : "🔽 שפל"}</span><span class="rng">${hhmm(toLocal(e.time))}</span></div>`).join("")}</div>` : ""}`;
+        })()}
         <button id="open-sounding" class="rt-clear" style="margin:14px 0 0">📊 פרופיל אנכי (סאונדינג)</button>
         <div class="section-title">24 השעות הקרובות</div><div class="hourly">${hours.join("")}</div>
         <div class="section-title">מטאוגרמה — 48 שעות</div>

@@ -285,11 +285,14 @@
     state.lastPoint = { lat, lon, label };
     W.ui.loading(true);
     try {
-      const data = await W.api.pointForecast(lat, lon, state.model);
-      state.lastForecast = data;
+      const [data, marine] = await Promise.all([
+        W.api.pointForecast(lat, lon, state.model),
+        W.api.marineForecast(lat, lon).catch(() => null),
+      ]);
+      state.lastForecast = data; state.lastMarine = marine;
       if (state.marker) map.removeLayer(state.marker);
       state.marker = L.marker([lat, lon]).addTo(map);
-      W.ui.renderForecast(data, label);
+      W.ui.renderForecast(data, label, marine);
       updateFavButton();
       const sb = document.getElementById("open-sounding");
       if (sb) sb.addEventListener("click", () => showSounding(lat, lon, label));
@@ -303,7 +306,7 @@
     try {
       const hourly = await W.api.sounding(lat, lon);
       W.ui.renderSounding(hourly, label || `${lat.toFixed(2)}, ${lon.toFixed(2)}`, () => {
-        if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, label); updateFavButton();
+        if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, label, state.lastMarine); updateFavButton();
           const sb = document.getElementById("open-sounding");
           if (sb) sb.addEventListener("click", () => showSounding(lat, lon, label)); }
       });
@@ -467,7 +470,7 @@
     syncSegs();
     const o = W.overlays[state.layer];
     if (o.kind === "wind" || o.kind === "scalar") { setLegendFor(); updateCrosshair(); }
-    if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, state.lastPoint.label); updateFavButton(); }
+    if (state.lastForecast) { W.ui.renderForecast(state.lastForecast, state.lastPoint.label, state.lastMarine); updateFavButton(); }
   }
   document.addEventListener("click", (e) => {
     if (!e.target.closest("#settings-popover")) setPop.classList.add("hidden");
