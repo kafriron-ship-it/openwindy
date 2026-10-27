@@ -240,7 +240,16 @@ html, body { margin: 0; height: 100%; font-family: -apple-system, "Segoe UI", Ro
   border: 1px solid var(--border); border-radius: 14px; padding: 8px 14px;
   box-shadow: var(--shadow); width: min(680px, 94vw);
 }
+/* Timeline runs left -> right (past/now left, future right) in both languages */
+#timebar { direction: ltr; }
+#time-label { direction: rtl; unicode-bidi: plaintext; }
 #time-controls { display: flex; align-items: center; gap: 12px; }
+.time-track { position: relative; flex: 1; display: flex; align-items: center; }
+#time-slider { width: 100%; position: relative; z-index: 2; background: transparent; }
+#time-ticks { position: absolute; left: 7px; right: 7px; top: 50%; height: 15px;
+  transform: translateY(-50%); pointer-events: none; z-index: 1; }
+#time-ticks .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.28); }
+#time-ticks .tick.week { background: rgba(255,255,255,.5); }
 #time-days {
   display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px;
   scrollbar-width: none; scroll-behavior: smooth;

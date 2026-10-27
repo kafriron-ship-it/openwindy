@@ -143,6 +143,17 @@
         chip.onclick = () => { this.setTimeIndex(noon); if (this._onDay) this._onDay(noon); };
         el.appendChild(chip);
       });
+      // day-boundary ticks on the slider track
+      const ticks = $("time-ticks"); ticks.innerHTML = "";
+      const max = Math.max(1, times.length - 1);
+      Object.keys(byDay).forEach((key, di) => {
+        const first = byDay[key][0].i;
+        if (first === 0) return;
+        const t = document.createElement("div");
+        t.className = "tick" + (di % 7 === 0 ? " week" : "");
+        t.style.left = (first / max * 100).toFixed(2) + "%";
+        ticks.appendChild(t);
+      });
       this.syncDayStrip();
     },
     syncDayStrip() {
