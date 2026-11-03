@@ -1,7 +1,7 @@
 // Unit preferences + conversions (persisted). International unit symbols.
 (function (W) {
   const KEY = "ow_units";
-  const def = { temp: "c", wind: "ms", pressure: "hpa", precip: "mm", dist: "km", wave: "m" };
+  const def = { temp: "c", wind: "kt", pressure: "hpa", precip: "mm", dist: "km", wave: "m" };
   let prefs = def;
   try { prefs = Object.assign({}, def, JSON.parse(localStorage.getItem(KEY) || "{}")); }
   catch (e) { prefs = { ...def }; }
