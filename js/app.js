@@ -347,6 +347,7 @@
             <button class="del" data-del="${i}" title="מחק">×</button></div>
           <div class="fav-sport">
             <select data-sport="${i}">${sportOptions(f.sport)}</select>
+            <button class="go dash" data-dash="${i}">דשבורד 🧭</button>
             <button class="go" data-report="${i}" ${f.sport ? "" : "disabled"}>תנאים 📊</button>
           </div>
         </div>`).join("")
@@ -379,6 +380,30 @@
         favPop.classList.add("hidden");
         showSpotReport(f);
       }));
+    favPop.querySelectorAll("[data-dash]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const f = W.favorites.all()[+el.dataset.dash];
+        favPop.classList.add("hidden");
+        showSpotDashboard(f);
+      }));
+  }
+
+  async function showSpotDashboard(f) {
+    W.ui.loading(true);
+    try {
+      const [fc, marine] = await Promise.all([
+        W.api.pointForecast(f.lat, f.lon, state.model),
+        W.api.marineCurrent(f.lat, f.lon).catch(() => null),
+      ]);
+      const handlers = {
+        onBack: () => W.ui.closePanel(),
+        onDetails: () => { map.setView([f.lat, f.lon], 9); showForecast(f.lat, f.lon, f.name); },
+        onSeaDir: (deg) => { W.favorites.setSeaDir(f.lat, f.lon, deg); f.seaDir = deg; W.ui.renderSpotDashboard(f, fc, marine, handlers); },
+      };
+      W.ui.renderSpotDashboard(f, fc, marine, handlers);
+    } catch (e) {
+      alert(e.code === 429 ? "חרגת ממכסת Open-Meteo — נסה בעוד כמה דקות" : "שגיאה: " + e.message);
+    } finally { W.ui.loading(false); }
   }
 
   async function showSpotReport(f) {

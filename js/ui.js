@@ -444,6 +444,93 @@
       this.openPanel();
     },
 
+    // Shore compass: colored sea arc + wind-flow arrow
+    _shoreCompass(windDir, seaDir, cls) {
+      const cx = 60, cy = 60, r = 48;
+      const pt = (b, rad) => ({ x: cx + rad * Math.sin(b * Math.PI / 180), y: cy - rad * Math.cos(b * Math.PI / 180) });
+      let seaArc = "";
+      if (seaDir != null) {
+        const a = pt(seaDir - 62, r), b = pt(seaDir + 62, r);
+        seaArc = `<path d="M ${a.x.toFixed(1)} ${a.y.toFixed(1)} A ${r} ${r} 0 0 1 ${b.x.toFixed(1)} ${b.y.toFixed(1)}" fill="none" stroke="#39a0ff" stroke-width="7" stroke-linecap="round"/>`;
+        const lbl = pt(seaDir, r - 14);
+        seaArc += `<text x="${lbl.x.toFixed(1)}" y="${(lbl.y + 3).toFixed(1)}" fill="#9fd0ff" font-size="9" text-anchor="middle">ים</text>`;
+      }
+      // wind flows toward windDir+180 (meteorological dir is where it comes FROM)
+      const col = cls === "offshore" ? "#39d98a" : cls === "onshore" ? "#fdae61" : "#9fd0ff";
+      let arrow = "";
+      if (windDir != null) {
+        const flow = windDir + 180;
+        const tip = pt(flow, 36), base = pt(flow + 180, 24);
+        const head1 = { x: tip.x + 9 * Math.sin((flow + 152) * Math.PI / 180), y: tip.y - 9 * Math.cos((flow + 152) * Math.PI / 180) };
+        const head2 = { x: tip.x + 9 * Math.sin((flow - 152) * Math.PI / 180), y: tip.y - 9 * Math.cos((flow - 152) * Math.PI / 180) };
+        arrow = `<line x1="${base.x.toFixed(1)}" y1="${base.y.toFixed(1)}" x2="${tip.x.toFixed(1)}" y2="${tip.y.toFixed(1)}" stroke="${col}" stroke-width="4" stroke-linecap="round"/>
+          <path d="M ${tip.x.toFixed(1)} ${tip.y.toFixed(1)} L ${head1.x.toFixed(1)} ${head1.y.toFixed(1)} L ${head2.x.toFixed(1)} ${head2.y.toFixed(1)} Z" fill="${col}"/>`;
+      }
+      return `<svg viewBox="0 0 120 120" width="120" height="120" direction="ltr">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#223052" stroke-width="2"/>
+        <text x="${cx}" y="14" fill="#5f6d8c" font-size="9" text-anchor="middle">N</text>
+        ${seaArc}${arrow}
+        <circle cx="${cx}" cy="${cy}" r="3" fill="${col}"/>
+      </svg>`;
+    },
+
+    renderSpotDashboard(f, fc, marine, h) {
+      const cur = fc.current;
+      const windMs = cur.wind_speed_10m, windDir = cur.wind_direction_10m, gustMs = cur.wind_gusts_10m;
+      const seaDir = f.seaDir != null ? f.seaDir : (marine ? marine.waveDir : null);
+      const cls = W.spots.shoreClass(windDir, seaDir);
+      const [icon, desc] = W.describe(cur.weather_code);
+
+      let verdict = "";
+      if (f.sport) {
+        const s = W.spots.scoreHour(f.sport, { windMs, waveM: marine ? marine.wave : null, precip: cur.precipitation });
+        const cv = s === 2 ? "green" : s === 1 ? "yellow" : "red";
+        const dot = s === 2 ? "🟢" : s === 1 ? "🟡" : "🔴";
+        const txt = s === 2 ? W.t("dash.good") : s === 1 ? W.t("dash.ok") : W.t("dash.bad");
+        verdict = `<div class="dash-verdict ${cv}">${dot} ${txt} · ${W.SPORTS[f.sport].icon} ${W.t("sport." + f.sport)}</div>`;
+      }
+
+      const dirs = [["0", "N"], ["45", "NE"], ["90", "E"], ["135", "SE"], ["180", "S"], ["225", "SW"], ["270", "W"], ["315", "NW"]];
+      const seaPicker = dirs.map(([deg, lbl]) =>
+        `<button class="sea-dir ${seaDir != null && Math.abs(((+deg - seaDir + 540) % 360) - 180) < 23 ? "active" : ""}" data-deg="${deg}">${lbl}</button>`).join("");
+
+      $("panel-content").innerHTML = `
+        <button id="sp-back" class="rt-clear" style="margin:0 0 12px">← חזרה</button>
+        <h2 class="loc-name">📍 ${f.name}</h2>
+        <div class="loc-sub">${W.t("dash.now")} · ${desc} ${icon}</div>
+
+        <div class="dash-main">
+          <div class="dash-compass">${this._shoreCompass(windDir, seaDir, cls)}
+            <div class="dash-shore ${cls || ""}">${cls ? W.t("shore." + cls) : ""}</div>
+            <div class="dash-shore-d">${cls ? W.t("shore." + cls + ".d") : "הגדר כיוון ים למטה"}</div>
+          </div>
+          <div class="dash-numbers">
+            <div class="dash-big">${Math.round(W.units.windVal(windMs))}<span>${W.units.windUnit()}</span></div>
+            <div class="dash-sub">${W.t("dash.wind")}</div>
+          </div>
+        </div>
+
+        ${verdict}
+
+        <div class="metrics" style="margin-top:14px">
+          ${gustMs != null ? `<div class="metric"><div class="k">${W.t("dash.gust")}</div><div class="v">${W.units.windStr(gustMs)}</div></div>` : ""}
+          ${marine && marine.wave != null ? `<div class="metric"><div class="k">${W.t("dash.wave")}</div><div class="v">${W.units.waveStr(marine.wave)}</div></div>` : ""}
+          ${marine && marine.sst != null ? `<div class="metric"><div class="k">${W.t("dash.water")}</div><div class="v">${W.units.tempStr(marine.sst)}</div></div>` : ""}
+          <div class="metric"><div class="k">${W.t("dash.windfrom")}</div><div class="v">${Math.round(windDir)}°</div></div>
+        </div>
+
+        <div class="section-title">${W.t("dash.seadir")}</div>
+        <div class="sea-picker">${seaPicker}</div>
+
+        <button id="dash-details" class="rt-clear" style="margin-top:14px">${W.t("dash.details")} →</button>`;
+
+      $("sp-back").addEventListener("click", h.onBack);
+      $("dash-details").addEventListener("click", h.onDetails);
+      $("panel-content").querySelectorAll(".sea-dir").forEach((b) =>
+        b.addEventListener("click", () => h.onSeaDir(+b.dataset.deg)));
+      this.openPanel();
+    },
+
     // Route planner panel
     renderRoute(route, handlers) {
       const presets = [

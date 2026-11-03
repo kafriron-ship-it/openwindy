@@ -64,5 +64,14 @@
     }));
   }
 
-  W.spots = { scoreHour, findWindows };
+  // Wind direction (meteorological, FROM) vs bearing toward the sea.
+  function shoreClass(windDir, seaDir) {
+    if (seaDir == null || windDir == null) return null;
+    let d = Math.abs(windDir - seaDir) % 360; if (d > 180) d = 360 - d;
+    if (d < 45) return "onshore";   // wind from the sea
+    if (d > 135) return "offshore"; // wind from the land
+    return "cross";                 // side-shore
+  }
+
+  W.spots = { scoreHour, findWindows, shoreClass };
 })(window.W);

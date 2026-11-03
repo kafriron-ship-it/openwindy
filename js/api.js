@@ -40,7 +40,7 @@
         temperature_unit: C.units.temperature, wind_speed_unit: C.units.windSpeed,
         current: ["temperature_2m","relative_humidity_2m","apparent_temperature",
           "is_day","weather_code","wind_speed_10m","wind_direction_10m",
-          "surface_pressure","precipitation"].join(","),
+          "wind_gusts_10m","surface_pressure","precipitation"].join(","),
         hourly: ["temperature_2m","weather_code","precipitation_probability",
           "precipitation","wind_speed_10m","wind_direction_10m","cloud_cover"].join(","),
         daily: ["weather_code","temperature_2m_max","temperature_2m_min",
@@ -175,6 +175,18 @@
       const wave = h.wave_height || [], tide = h.sea_level_height_msl || [];
       if (!wave.some((v) => v != null) && !tide.some((v) => v != null)) return null; // inland
       return { times: h.time || [], wave, tide };
+    },
+
+    // Current marine conditions (wave, sea temp, wave direction) at a point.
+    async marineCurrent(lat, lon) {
+      const p = new URLSearchParams({
+        latitude: lat.toFixed(4), longitude: lon.toFixed(4), timezone: "auto",
+        current: "wave_height,sea_surface_temperature,wave_direction",
+      });
+      const d = await getJSON(`${C.marineUrl}?${p}`);
+      const c = d.current || {};
+      if (c.wave_height == null && c.sea_surface_temperature == null) return null; // inland
+      return { wave: c.wave_height, sst: c.sea_surface_temperature, waveDir: c.wave_direction };
     },
 
     // Windy Webcams API v3 — needs the user's own free key (x-windy-api-key).

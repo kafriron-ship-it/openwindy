@@ -19,6 +19,10 @@
       const f = list.find((x) => same(x, lat, lon));
       if (f) { f.sport = sport; save(); }
     },
+    setSeaDir(lat, lon, deg) {
+      const f = list.find((x) => same(x, lat, lon));
+      if (f) { f.seaDir = deg; save(); }
+    },
     toggle(name, lat, lon) {
       if (this.has(lat, lon)) { this.remove(lat, lon); return false; }
       this.add(name, lat, lon); return true;
